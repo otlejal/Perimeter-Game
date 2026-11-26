@@ -49,14 +49,14 @@
     padding:8px 14px;transition:.15s;white-space:nowrap;
   }
   .btn:hover:not(:disabled){background:#1e3049;border-color:#3d5c82}
-  .btn:disabled{opacity:.45;cursor:default}
+  .btn:disabled{opacity:.5;cursor:default}
   .btn.ghost{background:transparent}
   .btn.primary{background:var(--accent);color:#161a20;border-color:var(--accent);font-weight:700}
   .btn.primary:hover:not(:disabled){filter:brightness(1.08)}
 
   /* ---------- Раскладка ---------- */
   .grid{
-    display:grid;grid-template-columns:286px minmax(0,1fr);
+    display:grid;grid-template-columns:300px minmax(0,1fr);
     gap:8px;padding:8px;height:calc(100vh - 58px);
   }
   .col{display:flex;flex-direction:column;gap:8px;min-height:0}
@@ -84,6 +84,12 @@
   .th-desc{font-size:11px;color:#93a4b8;margin-top:5px}
   .th-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);
     margin-top:6px;font-family:var(--mono)}
+  .tchips{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+  .tchip{
+    font-size:9px;letter-spacing:.02em;color:#9db0c6;
+    border:1px solid #2b3f57;background:#0f1a26;border-radius:3px;padding:1px 5px;
+  }
+  .tchip.phys{color:#ffc49a;border-color:#5a3d28;background:#1c140e}
   .none{color:var(--muted);font-size:12px}
 
   /* ---------- Журнал ---------- */
@@ -112,6 +118,9 @@
     padding:3px 8px;
   }
   .map-legend b{color:#ff8a8a;font-weight:500}
+  .lane-label{
+    fill:#8a6a52;font-size:9.5px;letter-spacing:.16em;text-anchor:middle;
+  }
 
   .edge{stroke:#1d2f44;stroke-width:2}
   .edge-flow{stroke:#2c4d6e;stroke-width:2;stroke-dasharray:4 11;opacity:.5;animation:flow 9s linear infinite}
@@ -124,13 +133,15 @@
   .node:hover .nbox{stroke:#3f6488}
   .node.sel .nbox{stroke:var(--accent);stroke-width:2;filter:drop-shadow(0 0 8px rgba(242,181,68,.35))}
   .node.t-ext .nbox{fill:#160f13;stroke:#5c2a31}
+  .node.t-street .nbox{fill:#181210;stroke:#7a4b2a}
   .node.t-dmz .nbox{fill:#0d1723;stroke:#2b527a}
   .node.t-zone .nbox{fill:#15130a;stroke:#64501f}
   .node.t-host .nbox{fill:#0c1713;stroke:#245a3f}
   .node.t-data .nbox{fill:#120f1c;stroke:#453879}
   .node.t-branch .nbox{fill:#0b1517;stroke:#225953}
-  .n-name{fill:#dfe9f4;font-size:13.5px;text-anchor:middle;font-weight:600}
-  .n-sub{fill:#7d8ea3;font-size:9.5px;text-anchor:middle;letter-spacing:.03em}
+  .node.t-phys .nbox{fill:#17110b;stroke:#7a5426}
+  .n-name{fill:#dfe9f4;font-size:13px;text-anchor:middle;font-weight:600}
+  .n-sub{fill:#7d8ea3;font-size:9px;text-anchor:middle;letter-spacing:.02em}
   .node.hint .nbox{animation:hintPulse 1.7s ease-in-out infinite}
   @keyframes hintPulse{
     0%,100%{stroke:#64501f}
@@ -186,17 +197,26 @@
   .schip button:hover{color:var(--bad)}
 
   /* ---------- Арсенал ---------- */
-  .arsenal{
-    display:flex;gap:6px;overflow-x:auto;
+  .arsenal-wrap{
     background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .cats{display:flex;gap:5px;flex-wrap:wrap}
+  .cat{
+    font-size:10.5px;padding:2px 9px;border-radius:20px;
+    border:1px solid var(--line);background:transparent;color:var(--muted);
+  }
+  .cat:hover{color:var(--text);border-color:#3a5674}
+  .cat.on{background:#1a2536;border-color:#3d5c82;color:var(--text)}
+  .arsenal{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));
+    gap:6px;max-height:172px;overflow:auto;
   }
   .tool{
-    flex:1 1 0;min-width:100px;
-    background:#101a26;border:1px solid #22344a;border-radius:7px;
-    padding:7px 8px;text-align:left;transition:.13s;position:relative;
+    background:#101a26;border:1px solid #22344a;border-left:3px solid var(--cc,#5aa9ff);
+    border-radius:7px;padding:7px 8px;text-align:left;transition:.13s;
   }
-  .tool:hover:not(.off){border-color:#3d6288;transform:translateY(-1px)}
-  .tool.off{opacity:.36;cursor:not-allowed}
+  .tool:hover{border-color:#3d6288;transform:translateY(-1px)}
   .t-top{display:flex;justify-content:space-between;align-items:center}
   .t-code{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:#9fc0e0}
   .t-cost{font-family:var(--mono);font-size:11px;color:var(--accent)}
@@ -210,7 +230,7 @@
   }
   .modal{
     background:#0f1723;border:1px solid #2a3f57;border-radius:11px;
-    padding:22px;max-width:640px;width:100%;max-height:88vh;overflow:auto;
+    padding:22px;max-width:620px;width:100%;max-height:88vh;overflow:auto;
     box-shadow:0 30px 80px rgba(0,0,0,.6);
   }
   .modal h2{margin:2px 0 8px;font-size:20px}
@@ -225,7 +245,14 @@
   }
   .step-t{font-size:12.5px;color:#b6c3d3;line-height:1.45}
   .step-t b{color:var(--text)}
-  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;flex-wrap:wrap}
+
+  .about{font-size:13px;color:#b6c3d3;line-height:1.5}
+  .eff{display:flex;flex-direction:column;gap:0;margin-top:4px}
+  .eff-row{display:flex;justify-content:space-between;gap:12px;padding:5px 0;
+    border-bottom:1px solid #17212d;font-size:12.5px}
+  .eff-row b{font-family:var(--mono);color:var(--ok);font-weight:500}
+  .meta-line{font-size:11.5px;color:var(--muted);margin-top:12px}
 
   .res-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;
     border-bottom:1px solid #17212d;font-size:12.5px}
@@ -249,8 +276,8 @@
   }
   .toast.bad{border-left-color:var(--bad)}
 
-  @media (max-width:1040px){
-    .grid{grid-template-columns:250px minmax(0,1fr)}
+  @media (max-width:1100px){
+    .grid{grid-template-columns:260px minmax(0,1fr)}
     .cia-bar{width:56px}
   }
   @media (max-width:860px){
@@ -258,7 +285,7 @@
     .grid{grid-template-columns:1fr;height:auto}
     .hud{flex-wrap:wrap;height:auto;padding:9px 12px;gap:10px}
     .hud-mid{margin-left:0;flex-wrap:wrap;gap:14px}
-    .mapwrap{height:52vh;min-height:340px}
+    .mapwrap{height:56vh;min-height:360px}
     .arsenal{max-height:none}
     .col{min-height:0}
   }
@@ -271,11 +298,11 @@
     <span class="logo">◈</span>
     <div>
       <div class="bt">ПЕРИМЕТР</div>
-      <div class="bs">Смена 1 · волна <span id="waveNum">1</span> из 6</div>
+      <div class="bs">Смена 1 · волна <span id="waveNum">1</span> из <span id="waveTotal">8</span></div>
     </div>
   </div>
   <div class="hud-mid">
-    <div class="money"><span class="lbl">Бюджет</span><b id="money">120 ₽</b></div>
+    <div class="money"><span class="lbl">Бюджет</span><b id="money">140 ₽</b></div>
     <div class="cia" id="cia"></div>
   </div>
   <div class="hud-right">
@@ -299,10 +326,13 @@
   <section class="stage">
     <div class="mapwrap">
       <div class="map-legend"><b>красным</b> — маршрут атаки · клик по узлу — выбрать</div>
-      <svg id="map" viewBox="0 0 880 560" preserveAspectRatio="xMidYMid meet"></svg>
+      <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <div class="inspector" id="inspector"></div>
-    <div class="arsenal" id="arsenal"></div>
+    <div class="arsenal-wrap">
+      <div class="cats" id="cats"></div>
+      <div class="arsenal" id="arsenal"></div>
+    </div>
   </section>
 </main>
 
@@ -315,83 +345,170 @@
 /* ============================ ДАННЫЕ ============================ */
 
 const NODES = {
-  inet:  { name:"Интернет",   sub:"внешняя сеть",     x:75,  y:270, slots:0, type:"ext" },
-  perim: { name:"Периметр",   sub:"межсетевой экран", x:230, y:270, slots:2, type:"zone" },
-  web:   { name:"Веб-сервер", sub:"DMZ",              x:405, y:112, slots:1, type:"dmz" },
-  core:  { name:"Ядро сети",  sub:"сегментация",      x:405, y:380, slots:2, type:"zone" },
-  arm:   { name:"АРМ",        sub:"рабочие места",    x:640, y:250, slots:2, type:"host" },
-  db:    { name:"1С / БД",    sub:"критичный актив",  x:640, y:440, slots:2, type:"data" },
-  backup:{ name:"Бэкап",      sub:"резервные копии",  x:815, y:520, slots:1, type:"data" },
-  branch:{ name:"Филиал",     sub:"канал связи",      x:150, y:505, slots:1, type:"branch" },
+  inet:   { name:"Интернет",   sub:"внешняя сеть",       x:65,  y:330, slots:0, type:"ext" },
+  perim:  { name:"Периметр",   sub:"межсетевой экран",   x:215, y:330, slots:2, type:"zone" },
+  web:    { name:"Веб-сервер", sub:"DMZ",                x:390, y:175, slots:2, type:"dmz" },
+  core:   { name:"Ядро сети",  sub:"сегментация",        x:390, y:435, slots:3, type:"zone" },
+  arm:    { name:"АРМ",        sub:"рабочие места",      x:640, y:300, slots:3, type:"host" },
+  db:     { name:"1С / БД",    sub:"критичный актив",    x:640, y:505, slots:3, type:"data" },
+  backup: { name:"Бэкап",      sub:"резервные копии",    x:820, y:595, slots:1, type:"data" },
+  branch: { name:"Филиал",     sub:"канал связи",        x:150, y:560, slots:1, type:"branch" },
+  street: { name:"Улица",      sub:"физический доступ",  x:905, y:90,  slots:1, type:"street" },
+  office: { name:"Офис",       sub:"помещения",          x:905, y:255, slots:3, type:"phys" },
+  server: { name:"Серверная",  sub:"стойка с серверами", x:905, y:425, slots:2, type:"phys" },
 };
 
 const EDGES = [
   ["inet","perim"], ["perim","web"], ["perim","core"], ["web","core"],
   ["core","arm"], ["core","db"], ["arm","db"], ["db","backup"], ["branch","core"],
+  ["street","office"], ["office","server"], ["office","arm"], ["server","db"],
 ];
 
 const ATTACKS = {
-  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:18, short:"эксплойт",
+  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:18,
+    short:"эксплойт", vector:"Внешняя сеть", cls:"Внедрение кода",
     path:["inet","perim","web"],
     desc:"Поиск уязвимости и выполнение кода на веб-сервере." },
-  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:18, short:"фишинг",
+
+  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:18,
+    short:"фишинг", vector:"Внешняя сеть", cls:"Кража доступа",
     path:["inet","perim","core","arm"],
     desc:"Письмо с вредоносной ссылкой. Кража учётных данных сотрудника." },
-  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:22, short:"подбор",
+
+  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:22,
+    short:"подбор", vector:"Внешняя сеть", cls:"Кража доступа",
     path:["inet","perim","core","db"],
     desc:"Перебор паролей к VPN и внутренним сервисам." },
-  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:40, short:"шифровальщик",
+
+  usb: { code:"USB", name:"USB-закладка", hp:3, prop:"i", dmg:20,
+    short:"USB", vector:"Физический доступ", cls:"Съёмный носитель",
+    path:["street","office","arm"],
+    desc:"Флешка, оставленная в офисе или принесённая «по работе»." },
+
+  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:40,
+    short:"шифровальщик", vector:"Внешняя сеть", cls:"Вредоносная программа",
     path:["inet","perim","core","arm","db","backup"],
     desc:"Заражение, боковое перемещение, шифрование данных и копий." },
-  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:28, short:"перехват",
+
+  breakin: { code:"BRK", name:"Проникновение в серверную", hp:5, prop:"i", dmg:35,
+    short:"проникновение", vector:"Физический доступ", cls:"Проникновение",
+    path:["street","office","server","db"],
+    desc:"Посторонний проходит в серверную и получает доступ к оборудованию." },
+
+  theft: { code:"TH", name:"Кража ноутбука", hp:3, prop:"c", dmg:25,
+    short:"кража", vector:"Физический доступ", cls:"Кража носителя",
+    path:["street","office","arm"],
+    desc:"Ноутбук или диск с данными уносят из офиса." },
+
+  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:28,
+    short:"перехват", vector:"Канал связи", cls:"Перехват",
     path:["branch","core","db"],
     desc:"MitM на незащищённом канале филиала." },
-  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:32, short:"DDoS",
+
+  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:32,
+    short:"DDoS", vector:"Внешняя сеть", cls:"Отказ в обслуживании",
     path:["inet","perim","web"],
     desc:"Перегрузка веб-сервера запросами. Отказ в обслуживании." },
-  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:32, short:"утечка",
+
+  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:32,
+    short:"утечка", vector:"Внутренняя сеть", cls:"Утечка данных",
     path:["arm","db"],
     desc:"Выгрузка данных изнутри периметра." },
 };
 
+const CATS = {
+  net:  { name:"Сетевые",         color:"#5aa9ff" },
+  host: { name:"Хостовые",        color:"#3ddc84" },
+  auth: { name:"Доступ",          color:"#a48cff" },
+  data: { name:"Данные",          color:"#f2b544" },
+  phys: { name:"Физические",      color:"#ff9f5a" },
+  org:  { name:"Организационные", color:"#7dd3c0" },
+};
+
 const TOOLS = {
-  fw:  { code:"FW",  name:"Межсетевой экран", cost:35,
-    dmg:{ exploit:2, ddos:4, phishing:1, brute:1, ransom:1, mitm:0, leak:0 },
-    desc:"Режет внешний трафик. Силён против DDoS и эксплойтов." },
-  edr: { code:"EDR", name:"EDR", cost:35,
-    dmg:{ exploit:1, ddos:0, phishing:3, brute:0, ransom:2, mitm:0, leak:0 },
-    desc:"Защита рабочих мест. Ловит фишинг и вредоносный код." },
-  mfa: { code:"MFA", name:"MFA", cost:30,
-    dmg:{ exploit:0, ddos:0, phishing:2, brute:3, ransom:0, mitm:1, leak:1 },
-    desc:"Второй фактор. Останавливает подбор паролей." },
-  seg: { code:"SEG", name:"Сегментация", cost:40,
-    dmg:{ exploit:1, ddos:0, phishing:0, brute:0, ransom:2, mitm:1, leak:1 },
-    desc:"Делит сеть на сегменты. Тормозит боковое перемещение." },
-  dlp: { code:"DLP", name:"DLP", cost:30,
-    dmg:{ exploit:0, ddos:0, phishing:0, brute:0, ransom:0, mitm:1, leak:3 },
-    desc:"Следит за утечками данных наружу." },
-  vpn: { code:"VPN", name:"Криптошлюз", cost:30, only:"branch",
-    dmg:{ exploit:0, ddos:0, phishing:0, brute:0, ransom:0, mitm:3, leak:1 },
-    desc:"Шифрует канал филиала. Только на узле «Филиал»." },
-  bkp: { code:"BKP", name:"Бэкап", cost:30, only:"backup", passive:true,
+  fw: { code:"FW", name:"Межсетевой экран", cost:30, cat:"net", allow:["perim","core"],
+    dmg:{ exploit:2, ddos:4, phishing:1, brute:1, ransom:1 },
+    about:"Фильтрует трафик на границе сети по правилам: какие соединения разрешены, а какие запрещены. Работает с адресами, портами и протоколами." },
+
+  ids: { code:"IDS", name:"Обнаружение вторжений", cost:30, cat:"net", allow:["perim","core"],
+    dmg:{ exploit:2, ddos:1, ransom:1, mitm:1 },
+    about:"Анализирует трафик и сравнивает его с сигнатурами известных атак. Находит подозрительные соединения и попытки эксплуатации уязвимостей." },
+
+  waf: { code:"WAF", name:"Защита веб-приложений", cost:30, cat:"net", allow:["web"],
+    dmg:{ exploit:3, ddos:2 },
+    about:"Разбирает HTTP-запросы к веб-приложению и отсекает вредоносные: инъекции, обход путей, атаки на формы." },
+
+  seg: { code:"SEG", name:"Сегментация сети", cost:35, cat:"net", allow:["core"],
+    dmg:{ exploit:1, ransom:2, mitm:1, leak:1 },
+    about:"Делит сеть на изолированные сегменты и ограничивает связи между ними. Затрудняет перемещение атакующего внутри сети." },
+
+  vpn: { code:"VPN", name:"Криптошлюз", cost:30, cat:"net", allow:["branch"],
+    dmg:{ mitm:3, leak:1 },
+    about:"Шифрует канал между площадками и защищает данные от чтения и подмены в пути." },
+
+  edr: { code:"EDR", name:"Защита конечных точек", cost:35, cat:"host", allow:["web","arm","db"],
+    dmg:{ exploit:1, phishing:3, ransom:2, usb:1 },
+    about:"Следит за процессами и поведением программ на хосте, блокирует вредоносную активность и попытки закрепления в системе." },
+
+  usbc: { code:"USB", name:"Контроль съёмных носителей", cost:25, cat:"host", allow:["web","arm","server"],
+    dmg:{ usb:3, theft:1 },
+    about:"Разрешает или блокирует подключение флешек и внешних дисков, ведёт журнал подключений." },
+
+  crypt: { code:"CRYPT", name:"Шифрование дисков", cost:30, cat:"host", allow:["arm","db"],
+    dmg:{ theft:3, leak:1 },
+    about:"Шифрует данные на диске. Без ключа содержимое носителя не читается." },
+
+  mfa: { code:"MFA", name:"Многофакторная аутентификация", cost:30, cat:"auth", allow:["perim","core","db"],
+    dmg:{ brute:3, phishing:2, mitm:1, leak:1 },
+    about:"Требует второй фактор при входе: код, токен или биометрию. Одного украденного пароля недостаточно." },
+
+  pam: { code:"PAM", name:"Привилегированный доступ", cost:35, cat:"auth", allow:["core","db"],
+    dmg:{ brute:2, leak:2, ransom:1 },
+    about:"Выдаёт административные права по запросу и на время, записывает сессии привилегированных пользователей." },
+
+  dlp: { code:"DLP", name:"Предотвращение утечек", cost:30, cat:"data", allow:["arm","db"],
+    dmg:{ leak:3, mitm:1 },
+    about:"Ищет в данных и трафике шаблоны чувствительной информации — паспорта, карты, договоры — и блокирует выгрузку." },
+
+  bkp: { code:"BKP", name:"Резервное копирование", cost:30, cat:"data", allow:["backup"], passive:true,
     dmg:{},
-    desc:"Снижает ущерб от шифровальщика вдвое. Только на узле «Бэкап»." },
+    about:"Регулярные копии данных вне основной системы. Позволяют восстановиться после шифрования или удаления." },
+
+  skud: { code:"СКУД", name:"Контроль доступа в помещения", cost:30, cat:"phys", allow:["office","server"],
+    dmg:{ breakin:3, theft:1 },
+    about:"Электронные замки, карты и журнал проходов. Пускает в помещение только тех, кому разрешено." },
+
+  guard: { code:"ОХР", name:"Охрана", cost:25, cat:"phys", allow:["street","office"],
+    dmg:{ breakin:2, theft:2, usb:1 },
+    about:"Пост на входе: проверка пропусков, досмотр, реакция на срабатывание сигнализации." },
+
+  safe: { code:"СЕЙФ", name:"Сейф", cost:25, cat:"phys", allow:["office"],
+    dmg:{ theft:3 },
+    about:"Запираемый сейф для носителей, документов и ключей. Защищает от быстрой кражи." },
+
+  train: { code:"ОБУЧ", name:"Обучение сотрудников", cost:30, cat:"org", allow:["office","arm"],
+    dmg:{ phishing:2, usb:2 },
+    about:"Регулярное обучение: как распознать фишинг, что делать с найденной флешкой, кому сообщать об инциденте." },
 };
 
 const WAVES = [
   ["exploit"],
   ["phishing"],
   ["brute"],
+  ["usb"],
   ["ransom"],
+  ["breakin","theft"],
   ["mitm"],
   ["ddos","leak"],
 ];
 
 const LESSONS = [
   "Эксплойт идёт по сети и упирается в периметр. Веб-приложение — входная точка, но встречать атаку лучше раньше.",
-  "Фишинг приходит в почту, а не через межсетевой экран. Его ловят на рабочем месте: EDR и второй фактор.",
+  "Фишинг приходит в почту, а не через межсетевой экран. Его ловят на рабочем месте: EDR и обучение.",
   "Подбор паролей останавливает MFA: пароль может утечь, второй фактор — нет.",
+  "Флешка, оставленная в офисе, — не сувенир. Контроль съёмных носителей и обучение закрывают физический вектор.",
   "Шифровальщик идёт цепочкой. Сегментация и EDR его тормозят, резервные копии снижают ущерб.",
+  "Проникновение в серверную обходит сеть целиком. СКУД, охрана и сейф — такие же средства защиты, как межсетевой экран.",
   "Канал филиала без шифрования читается. Криптошлюз закрывает перехват.",
   "DDoS бьёт по доступности, утечка — по конфиденциальности. Это разные средства и разные цели.",
 ];
@@ -399,19 +516,26 @@ const LESSONS = [
 const PROP = { c:"К", i:"Ц", a:"Д" };
 const PROP_FULL = { c:"конфиденциальность", i:"целостность", a:"доступность" };
 
+const CAT_ORDER = [
+  ["all","Все"], ["net","Сетевые"], ["host","Хосты"], ["auth","Доступ"],
+  ["data","Данные"], ["phys","Физические"], ["org","Орг"],
+];
+
 /* ============================ СОСТОЯНИЕ ============================ */
 
 const state = {
   wave: 0,
-  budget: 120,
+  budget: 140,
   cia: { c:100, i:100, a:100 },
   placed: {},
   node: null,
+  cat: "all",
   phase: "build",
   defeated: false,
   won: false,
   minutes: 0,
   log: [],
+  infoTool: null,
 };
 
 const NS = "http://www.w3.org/2000/svg";
@@ -436,6 +560,7 @@ function renderAll(){
   renderIntel();
   renderMap();
   renderInspector();
+  renderCats();
   renderArsenal();
   renderLog();
 }
@@ -443,6 +568,7 @@ function renderAll(){
 function renderHud(){
   document.getElementById("money").textContent = state.budget + " ₽";
   document.getElementById("waveNum").textContent = Math.min(state.wave + 1, WAVES.length);
+  document.getElementById("waveTotal").textContent = WAVES.length;
   document.getElementById("intelWave").textContent = Math.min(state.wave + 1, WAVES.length);
 
   const items = [["c","К"],["i","Ц"],["a","Д"]];
@@ -467,14 +593,16 @@ function renderIntel(){
     box.innerHTML = '<div class="none">Все волны позади.</div>';
     return;
   }
-  const wave = WAVES[state.wave];
-  box.innerHTML = wave.map(type => {
+  box.innerHTML = WAVES[state.wave].map(type => {
     const a = ATTACKS[type];
     const path = a.path.map(id => NODES[id].name).join(" → ");
+    const phys = a.vector === "Физический доступ";
     return '<div class="threat">' +
       '<div class="th-top"><span class="code">' + a.code + '</span>' +
       '<span class="hp">прочность ' + a.hp + '</span></div>' +
       '<div class="th-name">' + esc(a.name) + '</div>' +
+      '<div class="tchips"><span class="tchip' + (phys ? " phys" : "") + '">' + esc(a.vector) + '</span>' +
+      '<span class="tchip">' + esc(a.cls) + '</span></div>' +
       '<div class="th-path">' + esc(path) + '</div>' +
       '<div class="th-desc">' + esc(a.desc) + '</div>' +
       '<div class="th-meta"><span>бьёт по: ' + PROP[a.prop] + '</span>' +
@@ -511,20 +639,29 @@ function renderMap(){
     const hint = firstHints && id === "perim" ? " hint" : "";
 
     const badges = inst.map((t, i) => {
-      const bx = -((inst.length - 1) * 25) / 2 + i * 25;
+      const bx = -((inst.length - 1) * 30) / 2 + i * 30;
       return '<g class="badge" transform="translate(' + bx + ',40)">' +
-        '<rect x="-11.5" y="-9" width="23" height="18" rx="4"/>' +
-        '<text y="3">' + TOOLS[t].code + '</text></g>';
+        '<rect x="-14" y="-9" width="28" height="18" rx="4"/>' +
+        '<text y="3">' + esc(TOOLS[t].code) + '</text></g>';
     }).join("");
 
     return '<g class="node t-' + n.type + sel + hint + '" data-node="' + id + '" transform="translate(' + n.x + ',' + n.y + ')">' +
-      '<rect class="nbox" x="-64" y="-30" width="128" height="60" rx="10"/>' +
+      '<rect class="nbox" x="-62" y="-30" width="124" height="60" rx="10"/>' +
       '<text class="n-name" y="-3">' + esc(n.name) + '</text>' +
       '<text class="n-sub" y="15">' + esc(n.sub) + '</text>' +
       badges + '</g>';
   }).join("");
 
-  svg.innerHTML = edges + nodes + '<g id="tokens"></g>';
+  svg.innerHTML = edges + nodes +
+    '<text class="lane-label" x="905" y="30">ФИЗИЧЕСКИЙ ПЕРИМЕТР</text>' +
+    '<g id="tokens"></g>';
+}
+
+function nodeKind(n){
+  if(n.type === "phys") return "физический объект";
+  if(n.type === "street") return "физическая точка входа";
+  if(n.type === "ext") return "внешняя точка";
+  return "узел сети";
 }
 
 function renderInspector(){
@@ -543,49 +680,46 @@ function renderInspector(){
   const n = NODES[state.node];
   const inst = state.placed[state.node] || [];
   const chips = inst.length
-    ? inst.map(t => '<span class="schip">' + TOOLS[t].code +
+    ? inst.map(t => '<span class="schip">' + esc(TOOLS[t].code) +
         '<button data-remove="' + state.node + ':' + t + '" title="Снять, вернуть половину">×</button></span>').join("")
     : '<span class="hint">пусто</span>';
   box.innerHTML = '<b>' + esc(n.name) + '</b>' +
-    '<span class="hint">' + inst.length + '/' + n.slots + ' слотов</span>' +
+    '<span class="hint">' + esc(nodeKind(n)) + ' · ' + inst.length + '/' + n.slots + ' слотов</span>' +
     chips +
     '<span class="hint" style="margin-left:auto">Выберите средство защиты ниже</span>';
 }
 
+function renderCats(){
+  document.getElementById("cats").innerHTML = CAT_ORDER.map(([id, label]) =>
+    '<button class="cat ' + (state.cat === id ? "on" : "") + '" data-cat="' + id + '">' + label + '</button>'
+  ).join("");
+}
+
+function effLine(t){
+  if(t.passive) return "снижает ущерб шифровальщика";
+  return Object.entries(t.dmg)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([k, v]) => ATTACKS[k].short + " " + v)
+    .join(" · ");
+}
+
 function renderArsenal(){
-  const node = state.node;
-  const inst = node ? (state.placed[node] || []) : [];
-  const slots = node ? NODES[node].slots - inst.length : 0;
-
-  document.getElementById("arsenal").innerHTML = Object.entries(TOOLS).map(([id, t]) => {
-    let off = false, reason = "";
-    if(!node){ off = true; reason = "Сначала выберите узел на схеме"; }
-    else if(inst.includes(id)){ off = true; reason = "Уже установлено на этом узле"; }
-    else if(slots <= 0){ off = true; reason = "На узле нет свободных слотов"; }
-    else if(t.only && t.only !== node){ off = true; reason = "Ставится только на узел «" + NODES[t.only].name + "»"; }
-    else if(state.budget < t.cost){ off = true; reason = "Не хватает бюджета"; }
-
-    const eff = t.passive
-      ? "снижает ущерб шифровальщика"
-      : Object.entries(t.dmg)
-          .filter(([, v]) => v > 0)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 4)
-          .map(([k, v]) => ATTACKS[k].short + " " + v)
-          .join(" · ");
-
-    return '<button class="tool ' + (off ? "off" : "") + '" data-tool="' + id + '"' +
-      (off ? ' disabled' : '') + ' title="' + esc(reason || t.desc) + '">' +
-      '<div class="t-top"><span class="t-code">' + t.code + '</span>' +
+  const list = Object.entries(TOOLS).filter(([, t]) => state.cat === "all" || t.cat === state.cat);
+  document.getElementById("arsenal").innerHTML = list.map(([id, t]) => {
+    const cat = CATS[t.cat];
+    return '<button class="tool" data-tool="' + id + '" style="--cc:' + cat.color + '" title="' + esc(t.name) + '">' +
+      '<div class="t-top"><span class="t-code">' + esc(t.code) + '</span>' +
       '<span class="t-cost">' + t.cost + ' ₽</span></div>' +
       '<div class="t-name">' + esc(t.name) + '</div>' +
-      '<div class="t-eff">' + esc(eff) + '</div>' +
+      '<div class="t-eff">' + esc(effLine(t)) + '</div>' +
       '</button>';
   }).join("");
 }
 
 function renderLog(){
-  document.getElementById("log").innerHTML = state.log.slice(0, 12).map(e =>
+  document.getElementById("log").innerHTML = state.log.slice(0, 14).map(e =>
     '<div class="log-item ' + e.kind + '"><span class="log-t">' + e.t + '</span>' +
     '<span class="log-x">' + esc(e.text) + '</span></div>'
   ).join("") || '<div class="none">Пока тихо.</div>';
@@ -598,30 +732,31 @@ function selectNode(id){
   state.node = state.node === id ? null : id;
   renderMap();
   renderInspector();
-  renderArsenal();
+}
+
+function canInstall(nodeId, toolId){
+  const t = TOOLS[toolId];
+  const inst = state.placed[nodeId] || [];
+  if(inst.includes(toolId)) return { ok:false, reason:"Уже установлено на этом узле" };
+  if(inst.length >= NODES[nodeId].slots) return { ok:false, reason:"На узле нет свободных слотов" };
+  if(t.allow && !t.allow.includes(nodeId)) return { ok:false, reason:"Не подходит для этого узла" };
+  if(state.budget < t.cost) return { ok:false, reason:"Не хватает " + (t.cost - state.budget) + " ₽" };
+  return { ok:true };
 }
 
 function install(toolId){
   if(state.phase !== "build") return;
   const node = state.node;
   if(!node) return;
+  const check = canInstall(node, toolId);
+  if(!check.ok){ toast(check.reason, "bad"); return; }
+
   const t = TOOLS[toolId];
-  const inst = state.placed[node] || [];
-
-  if(inst.includes(toolId)){ toast("Здесь уже установлено."); return; }
-  if(inst.length >= NODES[node].slots){ toast("Свободных слотов нет."); return; }
-  if(t.only && t.only !== node){ toast("Это средство ставится только на «" + NODES[t.only].name + "»."); return; }
-  if(state.budget < t.cost){ toast("Не хватает бюджета.", "bad"); return; }
-
   state.budget -= t.cost;
-  state.placed[node] = inst.concat(toolId);
+  state.placed[node] = (state.placed[node] || []).concat(toolId);
   state.minutes += 2;
   log("ok", "Установлено: " + t.name + " → " + NODES[node].name);
-  renderHud();
-  renderMap();
-  renderInspector();
-  renderArsenal();
-  renderLog();
+  renderAll();
 }
 
 function removeTool(node, toolId){
@@ -647,9 +782,48 @@ function hasBackupOnPath(path){
 
 function applyDamage(prop, amount){
   state.cia[prop] = Math.max(0, state.cia[prop] - amount);
-  if(state.cia[prop] === 0){
-    state.defeated = true;
+  if(state.cia[prop] === 0) state.defeated = true;
+}
+
+/* ============================ ОПИСАНИЕ СРЕДСТВА ============================ */
+
+function openTool(id){
+  if(state.phase !== "build"){ toast("Идёт атака."); return; }
+  state.infoTool = id;
+  const t = TOOLS[id];
+  const cat = CATS[t.cat];
+
+  const eff = t.passive
+    ? '<p class="about">Снижает ущерб от шифровальщика вдвое и помогает восстановить данные после волны.</p>'
+    : '<div class="eff">' + Object.entries(t.dmg)
+        .filter(([, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([k, v]) => '<div class="eff-row"><span>' + esc(ATTACKS[k].name) + '</span><b>' + v + '</b></div>')
+        .join("") + '</div>';
+
+  let action;
+  if(state.node){
+    const check = canInstall(state.node, id);
+    action = check.ok
+      ? '<div class="modal-actions">' +
+          '<button class="btn ghost" data-act="close">Закрыть</button>' +
+          '<button class="btn primary" data-act="install-info">Установить на «' + esc(NODES[state.node].name) + '» — ' + t.cost + ' ₽</button>' +
+        '</div>'
+      : '<p class="meta-line">' + esc(check.reason) + '</p>' +
+        '<div class="modal-actions"><button class="btn ghost" data-act="close">Закрыть</button></div>';
+  } else {
+    action = '<p class="meta-line">Чтобы установить, выберите узел на схеме.</p>' +
+      '<div class="modal-actions"><button class="btn ghost" data-act="close">Закрыть</button></div>';
   }
+
+  openModal(
+    '<div class="kicker">' + esc(cat.name.toUpperCase()) + ' · СРЕДСТВО ЗАЩИТЫ</div>' +
+    '<h2>' + esc(t.name) + '</h2>' +
+    '<p class="about">' + esc(t.about) + '</p>' +
+    '<div class="kicker" style="margin-top:14px">ЭФФЕКТИВНОСТЬ</div>' +
+    eff +
+    action
+  );
 }
 
 /* ============================ АНИМАЦИЯ ============================ */
@@ -774,7 +948,7 @@ async function startWave(){
     return;
   }
 
-  const reward = 50 + (damaged ? 0 : 25);
+  const reward = 55 + (damaged ? 0 : 25);
   state.budget += reward;
 
   renderAll();
@@ -825,28 +999,27 @@ function showDefeat(){
   openModal(
     '<div class="kicker">СМЕНА ПРОВАЛЕНА</div>' +
     '<h2>Периметр пал</h2>' +
-    '<p>Компания потеряла ' + PROP_FULL[prop] + '. Дальше работать нечем: ' +
-      'инцидент перерос в остановку бизнеса.</p>' +
+    '<p>Компания потеряла ' + PROP_FULL[prop] + '. Дальше работать нечем: инцидент перерос в остановку бизнеса.</p>' +
     '<p class="none">Волна ' + (state.wave + 1) + ' из ' + WAVES.length + '.</p>' +
     '<div class="modal-actions"><button class="btn primary" data-act="restart">Начать заново</button></div>',
     true
   );
 }
 
-function showVictory(results){
+function showVictory(){
   const sum = state.cia.c + state.cia.i + state.cia.a;
   const score = sum + state.budget;
-  const grade = score >= 380 ? "Отлично" : score >= 300 ? "Зачёт" : "На грани";
+  const grade = score >= 620 ? "Отлично" : score >= 500 ? "Зачёт" : "На грани";
 
   openModal(
     '<div class="kicker">СМЕНА ЗАВЕРШЕНА</div>' +
-    '<div class="score"><b>' + score + '</b><span>' + grade + ' · все 6 волн позади</span></div>' +
+    '<div class="score"><b>' + score + '</b><span>' + grade + ' · все ' + WAVES.length + ' волн позади</span></div>' +
     '<div class="res-row"><span>Конфиденциальность</span><span>' + state.cia.c + ' / 100</span></div>' +
     '<div class="res-row"><span>Целостность</span><span>' + state.cia.i + ' / 100</span></div>' +
     '<div class="res-row"><span>Доступность</span><span>' + state.cia.a + ' / 100</span></div>' +
     '<div class="res-row"><span>Остаток бюджета</span><span>' + state.budget + ' ₽</span></div>' +
-    '<div class="lesson"><b>ГЛАВНОЕ</b>Не бывает одного средства от всего. ' +
-      'Защита — это набор контролей, расставленных по маршруту атаки.</div>' +
+    '<div class="lesson"><b>ГЛАВНОЕ</b>Не бывает одного средства от всего. Защита — это набор контролей, ' +
+      'расставленных по маршруту атаки. И не только в сети: дверь серверной — тоже периметр.</div>' +
     '<div class="modal-actions"><button class="btn primary" data-act="restart">Сыграть заново</button></div>',
     true
   );
@@ -856,13 +1029,13 @@ function helpModal(first){
   openModal(
     '<div class="kicker">ПЕРИМЕТР · СМЕНА 1</div>' +
     '<h2>' + (first ? "Держите периметр" : "Правила") + '</h2>' +
-    '<p>Компания «Стабильность-С», 45 человек. Атаки идут волнами. ' +
+    '<p>Компания «Стабильность-С», 45 человек. Атаки идут волнами — по сети и через физический доступ. ' +
       'Перед каждой волной вы видите разведку и расставляете защиту.</p>' +
     '<div class="steps">' +
-      '<div class="step"><div class="step-n">1</div><div class="step-t"><b>Выберите узел</b> на схеме: периметр, ядро, серверы, филиал. У каждого узла есть слоты.</div></div>' +
-      '<div class="step"><div class="step-n">2</div><div class="step-t"><b>Купите средство защиты.</b> Оно встанет на выбранный узел. Каждое средство бьёт только по своим типам атак — смотрите подписи на карточках.</div></div>' +
+      '<div class="step"><div class="step-n">1</div><div class="step-t"><b>Выберите узел</b> на схеме: сеть или физический периметр. У каждого узла есть слоты.</div></div>' +
+      '<div class="step"><div class="step-n">2</div><div class="step-t"><b>Откройте средство защиты.</b> Нажмите на карточку — увидите, что это и против чего работает. Устанавливать не обязательно.</div></div>' +
       '<div class="step"><div class="step-n">3</div><div class="step-t"><b>Начните волну.</b> Атака идёт по цепочке узлов; на каждом узле защита снимает прочность. Если прочность кончилась — атака остановлена.</div></div>' +
-      '<div class="step"><div class="step-n">4</div><div class="step-t"><b>Прорыв бьёт по К/Ц/Д.</b> Довели любую шкалу до нуля — смена провалена. Переживите 6 волн.</div></div>' +
+      '<div class="step"><div class="step-n">4</div><div class="step-t"><b>Прорыв бьёт по К/Ц/Д.</b> Довели любую шкалу до нуля — смена провалена. Переживите ' + WAVES.length + ' волн.</div></div>' +
     '</div>' +
     '<div class="modal-actions"><button class="btn primary" data-act="' + (first ? "start" : "close") + '">' +
       (first ? "Начать смену" : "Понятно") + '</button></div>',
@@ -885,8 +1058,16 @@ document.addEventListener("click", (e) => {
     return;
   }
 
+  const catEl = e.target.closest("[data-cat]");
+  if(catEl){
+    state.cat = catEl.dataset.cat;
+    renderCats();
+    renderArsenal();
+    return;
+  }
+
   const toolEl = e.target.closest("[data-tool]");
-  if(toolEl && !toolEl.disabled){ install(toolEl.dataset.tool); return; }
+  if(toolEl){ openTool(toolEl.dataset.tool); return; }
 
   const nodeEl = e.target.closest("[data-node]");
   if(nodeEl){ selectNode(nodeEl.dataset.node); return; }
@@ -898,6 +1079,9 @@ document.addEventListener("click", (e) => {
   if(act === "start-wave") startWave();
   else if(act === "help") helpModal(false);
   else if(act === "start"){ closeModal(); log("warn", "Смена начата. Периметр на вас."); renderAll(); }
+  else if(act === "install-info"){
+    if(state.infoTool){ install(state.infoTool); closeModal(); }
+  }
   else if(act === "close") closeModal();
   else if(act === "restart") location.reload();
 });

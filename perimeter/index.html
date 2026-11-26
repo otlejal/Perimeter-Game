@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ПЕРИМЕТР — защита сети</title>
+<style>
+  :root{
+    --bg:#070b11; --panel:#0e1520; --panel2:#0b121b; --line:#1c2a3a;
+    --text:#d5e0ec; --muted:#7d8ea3;
+    --accent:#f2b544; --ok:#3ddc84; --bad:#ff5f5f; --blue:#5aa9ff; --violet:#a48cff;
+    --mono:"Consolas","Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:radial-gradient(1100px 600px at 55% 0%, #0d1a2a 0%, #070b11 68%);
+    color:var(--text);overflow:hidden;
+    font:14px/1.4 "Segoe UI",system-ui,-apple-system,sans-serif;
+  }
+  button{font:inherit;color:inherit;cursor:pointer}
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-thumb{background:#223143;border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  /* ---------- HUD ---------- */
+  .hud{
+    display:flex;align-items:center;gap:18px;height:58px;padding:0 14px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#0f1a26,#0a1019);
+  }
+  .brand{display:flex;align-items:center;gap:9px;white-space:nowrap}
+  .logo{color:var(--accent);font-size:20px}
+  .bt{font-weight:700;letter-spacing:.22em;font-size:12px}
+  .bs{font-size:10.5px;color:var(--muted)}
+  .hud-mid{display:flex;align-items:center;gap:22px;margin-left:auto}
+  .money{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+  .money .lbl{font-size:9px;text-transform:uppercase;letter-spacing:.13em;color:var(--muted)}
+  .money b{font-family:var(--mono);font-size:16px;color:var(--accent);font-weight:500}
+  .cia{display:flex;gap:12px}
+  .cia-item{display:flex;align-items:center;gap:5px}
+  .cia-l{font-size:10px;color:var(--muted);width:9px}
+  .cia-bar{width:72px;height:6px;background:#16202c;border-radius:3px;overflow:hidden}
+  .cia-bar i{display:block;height:100%;background:var(--ok);transition:width .4s ease, background .4s}
+  .cia-v{font-family:var(--mono);font-size:11px;width:26px;text-align:right;color:#b9c7d8}
+  .hud-right{display:flex;gap:7px}
+  .btn{
+    background:#17253a;border:1px solid #2a4060;border-radius:6px;
+    padding:8px 14px;transition:.15s;white-space:nowrap;
+  }
+  .btn:hover:not(:disabled){background:#1e3049;border-color:#3d5c82}
+  .btn:disabled{opacity:.45;cursor:default}
+  .btn.ghost{background:transparent}
+  .btn.primary{background:var(--accent);color:#161a20;border-color:var(--accent);font-weight:700}
+  .btn.primary:hover:not(:disabled){filter:brightness(1.08)}
+
+  /* ---------- Раскладка ---------- */
+  .grid{
+    display:grid;grid-template-columns:286px minmax(0,1fr);
+    gap:8px;padding:8px;height:calc(100vh - 58px);
+  }
+  .col{display:flex;flex-direction:column;gap:8px;min-height:0}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:11px}
+  .panel h2{
+    margin:0 0 9px;font-size:9.5px;text-transform:uppercase;
+    letter-spacing:.15em;color:var(--muted);font-weight:600;
+  }
+  .grow{flex:1;min-height:0;overflow:auto}
+
+  /* ---------- Разведка ---------- */
+  .threat{
+    background:#111a25;border:1px solid #24384e;border-left:3px solid var(--bad);
+    border-radius:7px;padding:9px 10px;margin-bottom:8px;
+  }
+  .th-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .code{
+    font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+    background:#2a0f12;border:1px solid #5a2026;color:#ff9c9c;
+    padding:1px 6px;border-radius:4px;
+  }
+  .hp{font-family:var(--mono);font-size:10px;color:var(--muted)}
+  .th-name{font-size:13px;margin-top:5px}
+  .th-path{font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .th-desc{font-size:11px;color:#93a4b8;margin-top:5px}
+  .th-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--muted);
+    margin-top:6px;font-family:var(--mono)}
+  .none{color:var(--muted);font-size:12px}
+
+  /* ---------- Журнал ---------- */
+  .log{display:flex;flex-direction:column;gap:5px;font-size:11px}
+  .log-item{display:flex;gap:6px;color:var(--muted);line-height:1.35}
+  .log-t{font-family:var(--mono);color:#41556c;flex-shrink:0}
+  .log-item.ok .log-x{color:var(--ok)}
+  .log-item.bad .log-x{color:var(--bad)}
+  .log-item.warn .log-x{color:var(--accent)}
+
+  /* ---------- Карта ---------- */
+  .stage{display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
+  .mapwrap{
+    position:relative;flex:1;min-height:260px;border:1px solid var(--line);
+    border-radius:10px;overflow:hidden;background:#0a1119;
+    background-image:
+      linear-gradient(rgba(22,38,56,.55) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(22,38,56,.55) 1px, transparent 1px);
+    background-size:42px 42px;
+  }
+  #map{width:100%;height:100%;display:block}
+  .map-legend{
+    position:absolute;top:10px;left:12px;z-index:2;pointer-events:none;
+    font-size:10px;color:#7d8ea3;letter-spacing:.02em;
+    background:rgba(9,16,24,.78);border:1px solid #1c2a3a;border-radius:5px;
+    padding:3px 8px;
+  }
+  .map-legend b{color:#ff8a8a;font-weight:500}
+
+  .edge{stroke:#1d2f44;stroke-width:2}
+  .edge-flow{stroke:#2c4d6e;stroke-width:2;stroke-dasharray:4 11;opacity:.5;animation:flow 9s linear infinite}
+  .edge.hot{stroke:#5c2a31}
+  .edge-flow.hot{stroke:#ff5f5f;opacity:.75}
+  @keyframes flow{to{stroke-dashoffset:-150}}
+
+  .node{cursor:pointer}
+  .node .nbox{fill:#0f1a27;stroke:#25394f;stroke-width:1.5;transition:stroke .15s, filter .15s}
+  .node:hover .nbox{stroke:#3f6488}
+  .node.sel .nbox{stroke:var(--accent);stroke-width:2;filter:drop-shadow(0 0 8px rgba(242,181,68,.35))}
+  .node.t-ext .nbox{fill:#160f13;stroke:#5c2a31}
+  .node.t-dmz .nbox{fill:#0d1723;stroke:#2b527a}
+  .node.t-zone .nbox{fill:#15130a;stroke:#64501f}
+  .node.t-host .nbox{fill:#0c1713;stroke:#245a3f}
+  .node.t-data .nbox{fill:#120f1c;stroke:#453879}
+  .node.t-branch .nbox{fill:#0b1517;stroke:#225953}
+  .n-name{fill:#dfe9f4;font-size:13.5px;text-anchor:middle;font-weight:600}
+  .n-sub{fill:#7d8ea3;font-size:9.5px;text-anchor:middle;letter-spacing:.03em}
+  .node.hint .nbox{animation:hintPulse 1.7s ease-in-out infinite}
+  @keyframes hintPulse{
+    0%,100%{stroke:#64501f}
+    50%{stroke:var(--accent);filter:drop-shadow(0 0 10px rgba(242,181,68,.45))}
+  }
+  .badge rect{fill:#0d1b16;stroke:#3ddc8477}
+  .badge text{fill:#7ef0b0;font-size:8.5px;text-anchor:middle;font-family:var(--mono)}
+
+  .token circle{fill:#2a0b0b;stroke:var(--bad);stroke-width:1.5;
+    filter:drop-shadow(0 0 7px rgba(255,95,95,.55))}
+  .token text{fill:#ffc0c0;font-size:10px;text-anchor:middle;font-family:var(--mono)}
+  .token{transition:transform .42s linear}
+  .token.done{opacity:0;transition:opacity .3s}
+
+  .float{font-family:var(--mono);font-size:14px;text-anchor:middle;
+    animation:floatUp .95s ease forwards;pointer-events:none}
+  .float.def{fill:#7ef0b0}
+  .float.c{fill:#ff9c9c}
+  .float.i{fill:#ffc46b}
+  .float.a{fill:#8fb6ff}
+  @keyframes floatUp{
+    from{opacity:0;transform:translateY(8px)}
+    20%{opacity:1}
+    to{opacity:0;transform:translateY(-30px)}
+  }
+  .node.hit .nbox{animation:hitFlash .45s ease}
+  @keyframes hitFlash{
+    0%{stroke:var(--ok);stroke-width:3}
+    100%{stroke:#25394f;stroke-width:1.5}
+  }
+  .node.breach .nbox{animation:breachFlash .6s ease}
+  @keyframes breachFlash{
+    0%{stroke:var(--bad);stroke-width:3;fill:#2a0d0d}
+    100%{stroke:#25394f;stroke-width:1.5;fill:#0f1a27}
+  }
+
+  /* ---------- Инспектор ---------- */
+  .inspector{
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:8px 11px;min-height:46px;font-size:12px;
+  }
+  .inspector .hint{color:var(--muted)}
+  .schip{
+    display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:10px;
+    background:#0c1a14;border:1px solid #2b5a41;color:#8fe7b8;
+    border-radius:4px;padding:2px 4px 2px 7px;
+  }
+  .schip button{
+    background:transparent;border:none;color:#5f9c7c;font-size:12px;line-height:1;
+    padding:0 2px;
+  }
+  .schip button:hover{color:var(--bad)}
+
+  /* ---------- Арсенал ---------- */
+  .arsenal{
+    display:flex;gap:6px;overflow-x:auto;
+    background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px;
+  }
+  .tool{
+    flex:1 1 0;min-width:100px;
+    background:#101a26;border:1px solid #22344a;border-radius:7px;
+    padding:7px 8px;text-align:left;transition:.13s;position:relative;
+  }
+  .tool:hover:not(.off){border-color:#3d6288;transform:translateY(-1px)}
+  .tool.off{opacity:.36;cursor:not-allowed}
+  .t-top{display:flex;justify-content:space-between;align-items:center}
+  .t-code{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:#9fc0e0}
+  .t-cost{font-family:var(--mono);font-size:11px;color:var(--accent)}
+  .t-name{font-size:11.5px;margin:3px 0 2px;line-height:1.2}
+  .t-eff{font-size:9.5px;color:var(--muted);line-height:1.35}
+
+  /* ---------- Модалки ---------- */
+  .overlay{
+    position:fixed;inset:0;background:rgba(3,6,10,.82);backdrop-filter:blur(2px);
+    display:flex;align-items:center;justify-content:center;padding:18px;z-index:50;
+  }
+  .modal{
+    background:#0f1723;border:1px solid #2a3f57;border-radius:11px;
+    padding:22px;max-width:640px;width:100%;max-height:88vh;overflow:auto;
+    box-shadow:0 30px 80px rgba(0,0,0,.6);
+  }
+  .modal h2{margin:2px 0 8px;font-size:20px}
+  .modal p{margin:0 0 12px;font-size:13.5px;color:#b6c3d3}
+  .kicker{font-size:9.5px;letter-spacing:.2em;color:var(--accent);margin-bottom:6px}
+  .steps{display:flex;flex-direction:column;gap:11px;margin:14px 0}
+  .step{display:flex;gap:11px}
+  .step-n{
+    width:24px;height:24px;border-radius:50%;flex-shrink:0;
+    background:#1a1710;border:1px solid #5a4517;color:var(--accent);
+    font-family:var(--mono);font-size:12px;line-height:23px;text-align:center;
+  }
+  .step-t{font-size:12.5px;color:#b6c3d3;line-height:1.45}
+  .step-t b{color:var(--text)}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+
+  .res-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;
+    border-bottom:1px solid #17212d;font-size:12.5px}
+  .res-row .ok{color:var(--ok)}
+  .res-row .bad{color:var(--bad)}
+  .lesson{
+    margin:14px 0;padding:10px 12px;border-left:2px solid var(--accent);
+    background:#1a1710;color:#e8c98a;font-size:12.5px;
+  }
+  .lesson b{display:block;font-size:9px;letter-spacing:.14em;margin-bottom:4px;color:var(--accent)}
+  .score{display:flex;gap:18px;align-items:baseline;margin:6px 0 14px}
+  .score b{font-family:var(--mono);font-size:44px;color:var(--accent);font-weight:500;line-height:1}
+  .score span{font-size:13px;color:var(--muted)}
+
+  #toasts{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);
+    display:flex;flex-direction:column;gap:7px;z-index:80;align-items:center;width:min(520px,92vw)}
+  .toast{
+    background:#16212f;border:1px solid #33475f;border-left:3px solid var(--blue);
+    padding:8px 14px;border-radius:6px;font-size:12.5px;
+    box-shadow:0 10px 26px rgba(0,0,0,.5);
+  }
+  .toast.bad{border-left-color:var(--bad)}
+
+  @media (max-width:1040px){
+    .grid{grid-template-columns:250px minmax(0,1fr)}
+    .cia-bar{width:56px}
+  }
+  @media (max-width:860px){
+    body{overflow:auto}
+    .grid{grid-template-columns:1fr;height:auto}
+    .hud{flex-wrap:wrap;height:auto;padding:9px 12px;gap:10px}
+    .hud-mid{margin-left:0;flex-wrap:wrap;gap:14px}
+    .mapwrap{height:52vh;min-height:340px}
+    .arsenal{max-height:none}
+    .col{min-height:0}
+  }
+</style>
+</head>
+<body>
+
+<header class="hud">
+  <div class="brand">
+    <span class="logo">◈</span>
+    <div>
+      <div class="bt">ПЕРИМЕТР</div>
+      <div class="bs">Смена 1 · волна <span id="waveNum">1</span> из 6</div>
+    </div>
+  </div>
+  <div class="hud-mid">
+    <div class="money"><span class="lbl">Бюджет</span><b id="money">120 ₽</b></div>
+    <div class="cia" id="cia"></div>
+  </div>
+  <div class="hud-right">
+    <button class="btn ghost" data-act="help" title="Правила">?</button>
+    <button class="btn primary" id="startBtn" data-act="start-wave">Начать волну</button>
+  </div>
+</header>
+
+<main class="grid">
+  <aside class="col">
+    <section class="panel">
+      <h2>Разведка · волна <span id="intelWave">1</span></h2>
+      <div id="intel"></div>
+    </section>
+    <section class="panel grow">
+      <h2>Журнал</h2>
+      <div class="log" id="log"></div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="mapwrap">
+      <div class="map-legend"><b>красным</b> — маршрут атаки · клик по узлу — выбрать</div>
+      <svg id="map" viewBox="0 0 880 560" preserveAspectRatio="xMidYMid meet"></svg>
+    </div>
+    <div class="inspector" id="inspector"></div>
+    <div class="arsenal" id="arsenal"></div>
+  </section>
+</main>
+
+<div id="modal-root"></div>
+<div id="toasts"></div>
+
+<script>
+"use strict";
+
+/* ============================ ДАННЫЕ ============================ */
+
+const NODES = {
+  inet:  { name:"Интернет",   sub:"внешняя сеть",     x:75,  y:270, slots:0, type:"ext" },
+  perim: { name:"Периметр",   sub:"межсетевой экран", x:230, y:270, slots:2, type:"zone" },
+  web:   { name:"Веб-сервер", sub:"DMZ",              x:405, y:112, slots:1, type:"dmz" },
+  core:  { name:"Ядро сети",  sub:"сегментация",      x:405, y:380, slots:2, type:"zone" },
+  arm:   { name:"АРМ",        sub:"рабочие места",    x:640, y:250, slots:2, type:"host" },
+  db:    { name:"1С / БД",    sub:"критичный актив",  x:640, y:440, slots:2, type:"data" },
+  backup:{ name:"Бэкап",      sub:"резервные копии",  x:815, y:520, slots:1, type:"data" },
+  branch:{ name:"Филиал",     sub:"канал связи",      x:150, y:505, slots:1, type:"branch" },
+};
+
+const EDGES = [
+  ["inet","perim"], ["perim","web"], ["perim","core"], ["web","core"],
+  ["core","arm"], ["core","db"], ["arm","db"], ["db","backup"], ["branch","core"],
+];
+
+const ATTACKS = {
+  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:18, short:"эксплойт",
+    path:["inet","perim","web"],
+    desc:"Поиск уязвимости и выполнение кода на веб-сервере." },
+  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:18, short:"фишинг",
+    path:["inet","perim","core","arm"],
+    desc:"Письмо с вредоносной ссылкой. Кража учётных данных сотрудника." },
+  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:22, short:"подбор",
+    path:["inet","perim","core","db"],
+    desc:"Перебор паролей к VPN и внутренним сервисам." },
+  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:40, short:"шифровальщик",
+    path:["inet","perim","core","arm","db","backup"],
+    desc:"Заражение, боковое перемещение, шифрование данных и копий." },
+  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:28, short:"перехват",
+    path:["branch","core","db"],
+    desc:"MitM на незащищённом канале филиала." },
+  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:32, short:"DDoS",
+    path:["inet","perim","web"],
+    desc:"Перегрузка веб-сервера запросами. Отказ в обслуживании." },
+  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:32, short:"утечка",
+    path:["arm","db"],
+    desc:"Выгрузка данных изнутри периметра." },
+};
+
+const TOOLS = {
+  fw:  { code:"FW",  name:"Межсетевой экран", cost:35,
+    dmg:{ exploit:2, ddos:4, phishing:1, brute:1, ransom:1, mitm:0, leak:0 },
+    desc:"Режет внешний трафик. Силён против DDoS и эксплойтов." },
+  edr: { code:"EDR", name:"EDR", cost:35,
+    dmg:{ exploit:1, ddos:0, phishing:3, brute:0, ransom:2, mitm:0, leak:0 },
+    desc:"Защита рабочих мест. Ловит фишинг и вредоносный код." },
+  mfa: { code:"MFA", name:"MFA", cost:30,
+    dmg:{ exploit:0, ddos:0, phishing:2, brute:3, ransom:0, mitm:1, leak:1 },
+    desc:"Второй фактор. Останавливает подбор паролей." },
+  seg: { code:"SEG", name:"Сегментация", cost:40,
+    dmg:{ exploit:1, ddos:0, phishing:0, brute:0, ransom:2, mitm:1, leak:1 },
+    desc:"Делит сеть на сегменты. Тормозит боковое перемещение." },
+  dlp: { code:"DLP", name:"DLP", cost:30,
+    dmg:{ exploit:0, ddos:0, phishing:0, brute:0, ransom:0, mitm:1, leak:3 },
+    desc:"Следит за утечками данных наружу." },
+  vpn: { code:"VPN", name:"Криптошлюз", cost:30, only:"branch",
+    dmg:{ exploit:0, ddos:0, phishing:0, brute:0, ransom:0, mitm:3, leak:1 },
+    desc:"Шифрует канал филиала. Только на узле «Филиал»." },
+  bkp: { code:"BKP", name:"Бэкап", cost:30, only:"backup", passive:true,
+    dmg:{},
+    desc:"Снижает ущерб от шифровальщика вдвое. Только на узле «Бэкап»." },
+};
+
+const WAVES = [
+  ["exploit"],
+  ["phishing"],
+  ["brute"],
+  ["ransom"],
+  ["mitm"],
+  ["ddos","leak"],
+];
+
+const LESSONS = [
+  "Эксплойт идёт по сети и упирается в периметр. Веб-приложение — входная точка, но встречать атаку лучше раньше.",
+  "Фишинг приходит в почту, а не через межсетевой экран. Его ловят на рабочем месте: EDR и второй фактор.",
+  "Подбор паролей останавливает MFA: пароль может утечь, второй фактор — нет.",
+  "Шифровальщик идёт цепочкой. Сегментация и EDR его тормозят, резервные копии снижают ущерб.",
+  "Канал филиала без шифрования читается. Криптошлюз закрывает перехват.",
+  "DDoS бьёт по доступности, утечка — по конфиденциальности. Это разные средства и разные цели.",
+];
+
+const PROP = { c:"К", i:"Ц", a:"Д" };
+const PROP_FULL = { c:"конфиденциальность", i:"целостность", a:"доступность" };
+
+/* ============================ СОСТОЯНИЕ ============================ */
+
+const state = {
+  wave: 0,
+  budget: 120,
+  cia: { c:100, i:100, a:100 },
+  placed: {},
+  node: null,
+  phase: "build",
+  defeated: false,
+  won: false,
+  minutes: 0,
+  log: [],
+};
+
+const NS = "http://www.w3.org/2000/svg";
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+function clockStr(){
+  const t = 9 * 60 + state.minutes;
+  return String(Math.floor(t / 60) % 24).padStart(2,"0") + ":" + String(t % 60).padStart(2,"0");
+}
+function log(kind, text){
+  state.log.unshift({ kind, text, t: clockStr() });
+  state.log = state.log.slice(0, 30);
+}
+
+/* ============================ РЕНДЕР ============================ */
+
+function renderAll(){
+  renderHud();
+  renderIntel();
+  renderMap();
+  renderInspector();
+  renderArsenal();
+  renderLog();
+}
+
+function renderHud(){
+  document.getElementById("money").textContent = state.budget + " ₽";
+  document.getElementById("waveNum").textContent = Math.min(state.wave + 1, WAVES.length);
+  document.getElementById("intelWave").textContent = Math.min(state.wave + 1, WAVES.length);
+
+  const items = [["c","К"],["i","Ц"],["a","Д"]];
+  document.getElementById("cia").innerHTML = items.map(([k, l]) => {
+    const v = Math.max(0, state.cia[k]);
+    const col = v > 60 ? "var(--ok)" : v > 30 ? "var(--accent)" : "var(--bad)";
+    return '<div class="cia-item" title="' + PROP_FULL[k] + '">' +
+      '<span class="cia-l">' + l + '</span>' +
+      '<div class="cia-bar"><i style="width:' + v + '%;background:' + col + '"></i></div>' +
+      '<span class="cia-v">' + v + '</span></div>';
+  }).join("");
+
+  const btn = document.getElementById("startBtn");
+  btn.disabled = state.phase !== "build" || state.defeated || state.won;
+  btn.textContent = state.phase === "resolve" ? "Идёт атака…"
+    : state.won ? "Смена окончена" : state.defeated ? "Периметр пал" : "Начать волну";
+}
+
+function renderIntel(){
+  const box = document.getElementById("intel");
+  if(state.wave >= WAVES.length){
+    box.innerHTML = '<div class="none">Все волны позади.</div>';
+    return;
+  }
+  const wave = WAVES[state.wave];
+  box.innerHTML = wave.map(type => {
+    const a = ATTACKS[type];
+    const path = a.path.map(id => NODES[id].name).join(" → ");
+    return '<div class="threat">' +
+      '<div class="th-top"><span class="code">' + a.code + '</span>' +
+      '<span class="hp">прочность ' + a.hp + '</span></div>' +
+      '<div class="th-name">' + esc(a.name) + '</div>' +
+      '<div class="th-path">' + esc(path) + '</div>' +
+      '<div class="th-desc">' + esc(a.desc) + '</div>' +
+      '<div class="th-meta"><span>бьёт по: ' + PROP[a.prop] + '</span>' +
+      '<span>урон: ' + a.dmg + '</span></div>' +
+      '</div>';
+  }).join("");
+}
+
+function renderMap(){
+  const svg = document.getElementById("map");
+  const firstHints = state.wave === 0 && !Object.keys(state.placed).length;
+
+  const hot = new Set();
+  if(state.wave < WAVES.length){
+    WAVES[state.wave].forEach(t => {
+      const p = ATTACKS[t].path;
+      for(let i = 0; i < p.length - 1; i++){
+        hot.add(p[i] + "-" + p[i + 1]);
+        hot.add(p[i + 1] + "-" + p[i]);
+      }
+    });
+  }
+
+  const edges = EDGES.map(([a, b]) => {
+    const A = NODES[a], B = NODES[b];
+    const h = hot.has(a + "-" + b) ? " hot" : "";
+    return '<line class="edge' + h + '" x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '"/>' +
+      '<line class="edge-flow' + h + '" x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '"/>';
+  }).join("");
+
+  const nodes = Object.entries(NODES).map(([id, n]) => {
+    const inst = state.placed[id] || [];
+    const sel = state.node === id ? " sel" : "";
+    const hint = firstHints && id === "perim" ? " hint" : "";
+
+    const badges = inst.map((t, i) => {
+      const bx = -((inst.length - 1) * 25) / 2 + i * 25;
+      return '<g class="badge" transform="translate(' + bx + ',40)">' +
+        '<rect x="-11.5" y="-9" width="23" height="18" rx="4"/>' +
+        '<text y="3">' + TOOLS[t].code + '</text></g>';
+    }).join("");
+
+    return '<g class="node t-' + n.type + sel + hint + '" data-node="' + id + '" transform="translate(' + n.x + ',' + n.y + ')">' +
+      '<rect class="nbox" x="-64" y="-30" width="128" height="60" rx="10"/>' +
+      '<text class="n-name" y="-3">' + esc(n.name) + '</text>' +
+      '<text class="n-sub" y="15">' + esc(n.sub) + '</text>' +
+      badges + '</g>';
+  }).join("");
+
+  svg.innerHTML = edges + nodes + '<g id="tokens"></g>';
+}
+
+function renderInspector(){
+  const box = document.getElementById("inspector");
+  if(state.phase === "resolve"){
+    box.innerHTML = '<span class="hint">Атака идёт. Защита срабатывает на узлах по маршруту.</span>';
+    return;
+  }
+  if(!state.node){
+    const tip = state.wave === 0 && !Object.keys(state.placed).length
+      ? "Для первой волны начните с узла «Периметр»."
+      : "Выберите узел на схеме, затем средство защиты.";
+    box.innerHTML = '<span class="hint">1. Узел → 2. Средство защиты → 3. Начать волну. ' + tip + '</span>';
+    return;
+  }
+  const n = NODES[state.node];
+  const inst = state.placed[state.node] || [];
+  const chips = inst.length
+    ? inst.map(t => '<span class="schip">' + TOOLS[t].code +
+        '<button data-remove="' + state.node + ':' + t + '" title="Снять, вернуть половину">×</button></span>').join("")
+    : '<span class="hint">пусто</span>';
+  box.innerHTML = '<b>' + esc(n.name) + '</b>' +
+    '<span class="hint">' + inst.length + '/' + n.slots + ' слотов</span>' +
+    chips +
+    '<span class="hint" style="margin-left:auto">Выберите средство защиты ниже</span>';
+}
+
+function renderArsenal(){
+  const node = state.node;
+  const inst = node ? (state.placed[node] || []) : [];
+  const slots = node ? NODES[node].slots - inst.length : 0;
+
+  document.getElementById("arsenal").innerHTML = Object.entries(TOOLS).map(([id, t]) => {
+    let off = false, reason = "";
+    if(!node){ off = true; reason = "Сначала выберите узел на схеме"; }
+    else if(inst.includes(id)){ off = true; reason = "Уже установлено на этом узле"; }
+    else if(slots <= 0){ off = true; reason = "На узле нет свободных слотов"; }
+    else if(t.only && t.only !== node){ off = true; reason = "Ставится только на узел «" + NODES[t.only].name + "»"; }
+    else if(state.budget < t.cost){ off = true; reason = "Не хватает бюджета"; }
+
+    const eff = t.passive
+      ? "снижает ущерб шифровальщика"
+      : Object.entries(t.dmg)
+          .filter(([, v]) => v > 0)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4)
+          .map(([k, v]) => ATTACKS[k].short + " " + v)
+          .join(" · ");
+
+    return '<button class="tool ' + (off ? "off" : "") + '" data-tool="' + id + '"' +
+      (off ? ' disabled' : '') + ' title="' + esc(reason || t.desc) + '">' +
+      '<div class="t-top"><span class="t-code">' + t.code + '</span>' +
+      '<span class="t-cost">' + t.cost + ' ₽</span></div>' +
+      '<div class="t-name">' + esc(t.name) + '</div>' +
+      '<div class="t-eff">' + esc(eff) + '</div>' +
+      '</button>';
+  }).join("");
+}
+
+function renderLog(){
+  document.getElementById("log").innerHTML = state.log.slice(0, 12).map(e =>
+    '<div class="log-item ' + e.kind + '"><span class="log-t">' + e.t + '</span>' +
+    '<span class="log-x">' + esc(e.text) + '</span></div>'
+  ).join("") || '<div class="none">Пока тихо.</div>';
+}
+
+/* ============================ ДЕЙСТВИЯ ============================ */
+
+function selectNode(id){
+  if(state.phase !== "build") return;
+  state.node = state.node === id ? null : id;
+  renderMap();
+  renderInspector();
+  renderArsenal();
+}
+
+function install(toolId){
+  if(state.phase !== "build") return;
+  const node = state.node;
+  if(!node) return;
+  const t = TOOLS[toolId];
+  const inst = state.placed[node] || [];
+
+  if(inst.includes(toolId)){ toast("Здесь уже установлено."); return; }
+  if(inst.length >= NODES[node].slots){ toast("Свободных слотов нет."); return; }
+  if(t.only && t.only !== node){ toast("Это средство ставится только на «" + NODES[t.only].name + "»."); return; }
+  if(state.budget < t.cost){ toast("Не хватает бюджета.", "bad"); return; }
+
+  state.budget -= t.cost;
+  state.placed[node] = inst.concat(toolId);
+  state.minutes += 2;
+  log("ok", "Установлено: " + t.name + " → " + NODES[node].name);
+  renderHud();
+  renderMap();
+  renderInspector();
+  renderArsenal();
+  renderLog();
+}
+
+function removeTool(node, toolId){
+  if(state.phase !== "build") return;
+  const inst = state.placed[node] || [];
+  const i = inst.indexOf(toolId);
+  if(i < 0) return;
+  inst.splice(i, 1);
+  const refund = Math.round(TOOLS[toolId].cost / 2);
+  state.budget += refund;
+  state.minutes += 1;
+  log("warn", "Снято: " + TOOLS[toolId].name + " (−" + NODES[node].name + ", +" + refund + " ₽)");
+  renderAll();
+}
+
+function nodeDamage(nodeId, type){
+  return (state.placed[nodeId] || []).reduce((s, t) => s + (TOOLS[t].dmg[type] || 0), 0);
+}
+
+function hasBackupOnPath(path){
+  return path.some(id => (state.placed[id] || []).includes("bkp"));
+}
+
+function applyDamage(prop, amount){
+  state.cia[prop] = Math.max(0, state.cia[prop] - amount);
+  if(state.cia[prop] === 0){
+    state.defeated = true;
+  }
+}
+
+/* ============================ АНИМАЦИЯ ============================ */
+
+function floatText(node, text, kind){
+  const layer = document.getElementById("tokens");
+  if(!layer) return;
+  const el = document.createElementNS(NS, "text");
+  el.setAttribute("x", node.x);
+  el.setAttribute("y", node.y - 36);
+  el.setAttribute("class", "float " + kind);
+  el.textContent = text;
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), 950);
+}
+
+function pulse(nodeId, kind){
+  const g = document.querySelector('[data-node="' + nodeId + '"]');
+  if(!g) return;
+  g.classList.add(kind);
+  setTimeout(() => g.classList.remove(kind), 600);
+}
+
+async function runAttack(atk){
+  const layer = document.getElementById("tokens");
+  if(!layer) return { atk, leaked:false, dmgToCia:0, stoppedAt:null };
+
+  const start = NODES[atk.path[0]];
+  const g = document.createElementNS(NS, "g");
+  g.setAttribute("class", "token");
+  g.style.transform = "translate(" + start.x + "px," + start.y + "px)";
+  g.innerHTML = '<circle r="15"></circle><text y="4">' + atk.code + '</text>';
+  layer.appendChild(g);
+  await sleep(180);
+
+  let hp = atk.hp;
+  let stoppedAt = null;
+
+  for(let i = 0; i < atk.path.length; i++){
+    const id = atk.path[i];
+    const n = NODES[id];
+
+    if(i > 0){
+      g.style.transform = "translate(" + n.x + "px," + n.y + "px)";
+      await sleep(450);
+    }
+
+    const dmg = nodeDamage(id, atk.type);
+    if(dmg > 0){
+      hp -= dmg;
+      floatText(n, "−" + dmg, "def");
+      pulse(id, "hit");
+      log("ok", "СЗИ на «" + n.name + "»: −" + dmg + " к прочности атаки");
+      await sleep(280);
+      if(hp <= 0){ stoppedAt = id; break; }
+    }
+  }
+
+  let leaked = false, dmgToCia = 0;
+  if(hp > 0){
+    leaked = true;
+    const ratio = Math.max(0, hp) / atk.hp;
+    dmgToCia = Math.max(1, Math.round(atk.dmg * ratio));
+    if(atk.type === "ransom" && hasBackupOnPath(atk.path)){
+      dmgToCia = Math.max(1, Math.round(dmgToCia / 2));
+      log("warn", "Бэкап снизил ущерб от шифровальщика вдвое");
+    }
+    applyDamage(atk.prop, dmgToCia);
+    const target = NODES[atk.path[atk.path.length - 1]];
+    floatText(target, "−" + dmgToCia + " " + PROP[atk.prop], atk.prop);
+    pulse(atk.path[atk.path.length - 1], "breach");
+    log("bad", atk.name + ": прорыв, −" + dmgToCia + " " + PROP_FULL[atk.prop]);
+    renderHud();
+  } else {
+    log("ok", atk.name + ": остановлен на «" + NODES[stoppedAt].name + "»");
+  }
+
+  g.classList.add("done");
+  await sleep(320);
+  g.remove();
+
+  return { atk, hp, stoppedAt, leaked, dmgToCia };
+}
+
+/* ============================ ВОЛНЫ ============================ */
+
+async function startWave(){
+  if(state.phase !== "build" || state.defeated || state.won) return;
+
+  state.phase = "resolve";
+  state.node = null;
+  state.minutes += 5;
+  renderAll();
+  log("warn", "Волна " + (state.wave + 1) + ": атака началась");
+  renderLog();
+
+  const wave = WAVES[state.wave];
+  const results = [];
+
+  for(const type of wave){
+    const res = await runAttack({ ...ATTACKS[type], type });
+    results.push(res);
+    if(state.defeated) break;
+  }
+
+  state.phase = "build";
+  renderHud();
+
+  if(state.defeated){
+    renderAll();
+    showDefeat();
+    return;
+  }
+
+  const damaged = results.some(r => r.leaked);
+  state.wave++;
+
+  if(state.wave >= WAVES.length){
+    state.won = true;
+    renderAll();
+    showVictory(results);
+    return;
+  }
+
+  const reward = 50 + (damaged ? 0 : 25);
+  state.budget += reward;
+
+  renderAll();
+  showDebrief(results, reward, damaged);
+}
+
+/* ============================ ЭКРАНЫ ============================ */
+
+function openModal(html, isStatic){
+  document.getElementById("modal-root").innerHTML =
+    '<div class="overlay"><div class="modal"' + (isStatic ? ' data-static="1"' : '') + '>' + html + '</div></div>';
+}
+function closeModal(){ document.getElementById("modal-root").innerHTML = ""; }
+
+function toast(text, kind){
+  const box = document.getElementById("toasts");
+  const el = document.createElement("div");
+  el.className = "toast " + (kind || "");
+  el.textContent = text;
+  box.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function showDebrief(results, reward, damaged){
+  const rows = results.map(r => {
+    const ok = !r.leaked;
+    return '<div class="res-row"><span>' + esc(r.atk.name) + '</span>' +
+      '<span class="' + (ok ? "ok" : "bad") + '">' +
+      (ok ? "остановлен: " + esc(NODES[r.stoppedAt].name)
+          : "прорыв: −" + r.dmgToCia + " " + PROP[r.atk.prop]) +
+      '</span></div>';
+  }).join("");
+
+  openModal(
+    '<div class="kicker">ИТОГ ВОЛНЫ ' + state.wave + '</div>' +
+    '<h2>' + (damaged ? "Волна прорвана" : "Волна отбита") + '</h2>' +
+    rows +
+    '<div class="lesson"><b>УРОК</b>' + esc(LESSONS[state.wave - 1]) + '</div>' +
+    '<p class="none">Бюджет пополнен на ' + reward + ' ₽' +
+      (damaged ? " (без бонуса за чистую волну)" : " (включая бонус за чистую волну)") + '.</p>' +
+    '<div class="modal-actions"><button class="btn primary" data-act="close">Следующая волна</button></div>',
+    true
+  );
+}
+
+function showDefeat(){
+  const prop = state.cia.c === 0 ? "c" : state.cia.i === 0 ? "i" : "a";
+  openModal(
+    '<div class="kicker">СМЕНА ПРОВАЛЕНА</div>' +
+    '<h2>Периметр пал</h2>' +
+    '<p>Компания потеряла ' + PROP_FULL[prop] + '. Дальше работать нечем: ' +
+      'инцидент перерос в остановку бизнеса.</p>' +
+    '<p class="none">Волна ' + (state.wave + 1) + ' из ' + WAVES.length + '.</p>' +
+    '<div class="modal-actions"><button class="btn primary" data-act="restart">Начать заново</button></div>',
+    true
+  );
+}
+
+function showVictory(results){
+  const sum = state.cia.c + state.cia.i + state.cia.a;
+  const score = sum + state.budget;
+  const grade = score >= 380 ? "Отлично" : score >= 300 ? "Зачёт" : "На грани";
+
+  openModal(
+    '<div class="kicker">СМЕНА ЗАВЕРШЕНА</div>' +
+    '<div class="score"><b>' + score + '</b><span>' + grade + ' · все 6 волн позади</span></div>' +
+    '<div class="res-row"><span>Конфиденциальность</span><span>' + state.cia.c + ' / 100</span></div>' +
+    '<div class="res-row"><span>Целостность</span><span>' + state.cia.i + ' / 100</span></div>' +
+    '<div class="res-row"><span>Доступность</span><span>' + state.cia.a + ' / 100</span></div>' +
+    '<div class="res-row"><span>Остаток бюджета</span><span>' + state.budget + ' ₽</span></div>' +
+    '<div class="lesson"><b>ГЛАВНОЕ</b>Не бывает одного средства от всего. ' +
+      'Защита — это набор контролей, расставленных по маршруту атаки.</div>' +
+    '<div class="modal-actions"><button class="btn primary" data-act="restart">Сыграть заново</button></div>',
+    true
+  );
+}
+
+function helpModal(first){
+  openModal(
+    '<div class="kicker">ПЕРИМЕТР · СМЕНА 1</div>' +
+    '<h2>' + (first ? "Держите периметр" : "Правила") + '</h2>' +
+    '<p>Компания «Стабильность-С», 45 человек. Атаки идут волнами. ' +
+      'Перед каждой волной вы видите разведку и расставляете защиту.</p>' +
+    '<div class="steps">' +
+      '<div class="step"><div class="step-n">1</div><div class="step-t"><b>Выберите узел</b> на схеме: периметр, ядро, серверы, филиал. У каждого узла есть слоты.</div></div>' +
+      '<div class="step"><div class="step-n">2</div><div class="step-t"><b>Купите средство защиты.</b> Оно встанет на выбранный узел. Каждое средство бьёт только по своим типам атак — смотрите подписи на карточках.</div></div>' +
+      '<div class="step"><div class="step-n">3</div><div class="step-t"><b>Начните волну.</b> Атака идёт по цепочке узлов; на каждом узле защита снимает прочность. Если прочность кончилась — атака остановлена.</div></div>' +
+      '<div class="step"><div class="step-n">4</div><div class="step-t"><b>Прорыв бьёт по К/Ц/Д.</b> Довели любую шкалу до нуля — смена провалена. Переживите 6 волн.</div></div>' +
+    '</div>' +
+    '<div class="modal-actions"><button class="btn primary" data-act="' + (first ? "start" : "close") + '">' +
+      (first ? "Начать смену" : "Понятно") + '</button></div>',
+    true
+  );
+}
+
+/* ============================ СОБЫТИЯ ============================ */
+
+document.addEventListener("click", (e) => {
+  if(e.target.classList && e.target.classList.contains("overlay")){
+    const m = e.target.querySelector(".modal");
+    if(m && !m.dataset.static) closeModal();
+  }
+
+  const rm = e.target.closest("[data-remove]");
+  if(rm){
+    const parts = rm.dataset.remove.split(":");
+    removeTool(parts[0], parts[1]);
+    return;
+  }
+
+  const toolEl = e.target.closest("[data-tool]");
+  if(toolEl && !toolEl.disabled){ install(toolEl.dataset.tool); return; }
+
+  const nodeEl = e.target.closest("[data-node]");
+  if(nodeEl){ selectNode(nodeEl.dataset.node); return; }
+
+  const el = e.target.closest("[data-act]");
+  if(!el) return;
+  const act = el.dataset.act;
+
+  if(act === "start-wave") startWave();
+  else if(act === "help") helpModal(false);
+  else if(act === "start"){ closeModal(); log("warn", "Смена начата. Периметр на вас."); renderAll(); }
+  else if(act === "close") closeModal();
+  else if(act === "restart") location.reload();
+});
+
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape") closeModal();
+});
+
+/* ============================ СТАРТ ============================ */
+
+renderAll();
+helpModal(true);
+</script>
+</body>
+</html>

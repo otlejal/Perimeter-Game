@@ -6,3 +6,5 @@ rollback/
 $($_.Name)
 console.log('ERR'
 query
+index.local.html
+Документация_сервер_192.168.88.6.md

@@ -91,6 +91,7 @@
     border:1px solid #2b3f57;background:#0f1a26;border-radius:3px;padding:1px 5px;
   }
   .tchip.phys{color:#ffc49a;border-color:#5a3d28;background:#1c140e}
+  .tchip.hw{color:#8fe3d6;border-color:#2f6f7a;background:#0c1a1d}
   .none{color:var(--muted);font-size:12px}
 
   /* ---------- Журнал ---------- */
@@ -119,9 +120,15 @@
     padding:3px 8px;
   }
   .map-legend b{color:#ff8a8a;font-weight:500}
-  .lane-label{
-    fill:#8a6a52;font-size:9.5px;letter-spacing:.16em;text-anchor:middle;
+  .view-toggle{position:absolute;top:9px;right:11px;z-index:3;display:flex;gap:4px}
+  .vt{
+    font-size:10.5px;padding:3px 9px;border-radius:5px;
+    border:1px solid #26374b;background:#0d151f;color:#8fa2b8;
   }
+  .vt:hover{color:#dbe6f2;border-color:#3a5674}
+  .vt.on{background:#1a2536;border-color:#3d5c82;color:#dbe6f2}
+  .lane-label{fill:#8a6a52;font-size:9.5px;letter-spacing:.16em;text-anchor:middle}
+  .lane-label.hw{fill:#4f8f9a}
 
   .edge{stroke:#1d2f44;stroke-width:2}
   .edge-flow{stroke:#2c4d6e;stroke-width:2;stroke-dasharray:4 11;opacity:.5;animation:flow 9s linear infinite}
@@ -141,6 +148,8 @@
   .node.t-data .nbox{fill:#120f1c;stroke:#453879}
   .node.t-branch .nbox{fill:#0b1517;stroke:#225953}
   .node.t-phys .nbox{fill:#17110b;stroke:#7a5426}
+  .node.t-hw .nbox{fill:#0c181c;stroke:#2f6f7a}
+  .node.t-ai .nbox{fill:#171022;stroke:#6a4a8a}
   .n-name{fill:#dfe9f4;font-size:13px;text-anchor:middle;font-weight:600}
   .n-sub{fill:#7d8ea3;font-size:9px;text-anchor:middle;letter-spacing:.02em}
   .node.hint .nbox{animation:hintPulse 1.7s ease-in-out infinite}
@@ -202,9 +211,9 @@
     background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:8px;
     display:flex;flex-direction:column;gap:6px;
   }
-  .cats{display:flex;gap:5px;flex-wrap:wrap}
+  .cats{display:flex;gap:5px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:2px}
   .cat{
-    font-size:10.5px;padding:2px 9px;border-radius:20px;
+    font-size:10.5px;padding:2px 9px;border-radius:20px;white-space:nowrap;
     border:1px solid var(--line);background:transparent;color:var(--muted);
   }
   .cat:hover{color:var(--text);border-color:#3a5674}
@@ -299,7 +308,7 @@
     <span class="logo">◈</span>
     <div>
       <div class="bt">ПЕРИМЕТР</div>
-      <div class="bs">Смена 1 · волна <span id="waveNum">1</span> из <span id="waveTotal">8</span></div>
+      <div class="bs">Смена 1 · волна <span id="waveNum">1</span> из <span id="waveTotal">30</span></div>
     </div>
   </div>
   <div class="hud-mid">
@@ -328,6 +337,7 @@
   <section class="stage">
     <div class="mapwrap">
       <div class="map-legend"><b>красным</b> — маршрут атаки · клик по узлу — выбрать</div>
+      <div class="view-toggle" id="viewToggle"></div>
       <svg id="map" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid meet"></svg>
     </div>
     <div class="inspector" id="inspector"></div>
@@ -347,85 +357,160 @@
 /* ============================ ДАННЫЕ ============================ */
 
 const NODES = {
-  inet:   { name:"Интернет",   sub:"внешняя сеть",       x:65,  y:330, slots:0, type:"ext" },
-  perim:  { name:"Периметр",   sub:"межсетевой экран",   x:215, y:330, slots:2, type:"zone" },
-  web:    { name:"Веб-сервер", sub:"DMZ",                x:390, y:175, slots:2, type:"dmz" },
-  core:   { name:"Ядро сети",  sub:"сегментация",        x:390, y:435, slots:3, type:"zone" },
-  arm:    { name:"АРМ",        sub:"рабочие места",      x:640, y:300, slots:3, type:"host" },
-  db:     { name:"1С / БД",    sub:"критичный актив",    x:640, y:505, slots:3, type:"data" },
-  backup: { name:"Бэкап",      sub:"резервные копии",    x:820, y:595, slots:1, type:"data" },
-  branch: { name:"Филиал",     sub:"канал связи",        x:150, y:560, slots:1, type:"branch" },
-  street: { name:"Улица",      sub:"физический доступ",  x:905, y:90,  slots:1, type:"street" },
-  office: { name:"Офис",       sub:"помещения",          x:905, y:255, slots:3, type:"phys" },
-  server: { name:"Серверная",  sub:"стойка с серверами", x:905, y:425, slots:2, type:"phys" },
+  inet:   { name:"Интернет",   sub:"внешняя сеть",       slots:0, type:"ext",    views:["net","hw"] },
+  perim:  { name:"Периметр",   sub:"межсетевой экран",   slots:2, type:"zone",   views:["net"] },
+  web:    { name:"Веб-сервер", sub:"DMZ",                slots:2, type:"dmz",    views:["net"] },
+  core:   { name:"Ядро сети",  sub:"сегментация",        slots:3, type:"zone",   views:["net"] },
+  arm:    { name:"АРМ",        sub:"рабочие места",      slots:3, type:"host",   views:["net"] },
+  db:     { name:"1С / БД",    sub:"критичный актив",    slots:3, type:"data",   views:["net"] },
+  backup: { name:"Бэкап",      sub:"резервные копии",    slots:1, type:"data",   views:["net"] },
+  branch: { name:"Филиал",     sub:"канал связи",        slots:1, type:"branch", views:["net"] },
+  ai:     { name:"ИИ-сервис",  sub:"модель и данные",    slots:2, type:"ai",     views:["net"] },
+  street: { name:"Улица",      sub:"физический доступ",  slots:2, type:"street", views:["net","hw"] },
+  office: { name:"Офис",       sub:"помещения",          slots:5, type:"phys",   views:["net","hw"] },
+  server: { name:"Серверная",  sub:"стойка с серверами", slots:2, type:"phys",   views:["net","hw"] },
+  bios:   { name:"Прошивка",   sub:"BIOS / UEFI",        slots:2, type:"hw",     views:["hw"] },
+  boot:   { name:"Загрузчик",  sub:"boot loader",        slots:2, type:"hw",     views:["hw"] },
+  kernel: { name:"Ядро ОС",    sub:"kernel",             slots:2, type:"hw",     views:["hw"] },
+  pcie:   { name:"PCIe / TB",  sub:"шина и Thunderbolt", slots:1, type:"hw",     views:["hw"] },
+  usb:    { name:"USB / периферия", sub:"порты",         slots:2, type:"hw",     views:["hw"] },
+  updates:{ name:"Обновления", sub:"канал обновлений",   slots:1, type:"hw",     views:["hw"] },
 };
 
-const EDGES = [
-  ["inet","perim"], ["perim","web"], ["perim","core"], ["web","core"],
-  ["core","arm"], ["core","db"], ["arm","db"], ["db","backup"], ["branch","core"],
-  ["street","office"], ["office","server"], ["office","arm"], ["server","db"],
-];
+const POS = {
+  net: {
+    inet:[65,330], perim:[215,330], web:[390,175], core:[390,435],
+    arm:[640,300], db:[640,505], backup:[820,595], branch:[150,560],
+    ai:[410,598],
+    street:[905,90], office:[905,255], server:[905,425],
+  },
+  hw: {
+    inet:[70,120], updates:[280,120],
+    street:[70,380], office:[280,380], server:[490,380],
+    bios:[720,110], boot:[720,245], kernel:[720,380],
+    pcie:[900,245], usb:[630,575],
+  },
+};
+
+const EDGES = {
+  net: [
+    ["inet","perim"], ["perim","web"], ["perim","core"], ["web","core"],
+    ["core","arm"], ["core","db"], ["arm","db"], ["db","backup"], ["branch","core"],
+    ["core","ai"],
+    ["street","office"], ["office","server"], ["office","arm"], ["server","db"],
+  ],
+  hw: [
+    ["inet","updates"], ["updates","kernel"],
+    ["street","office"], ["office","server"],
+    ["server","bios"], ["bios","boot"], ["boot","kernel"],
+    ["server","pcie"], ["pcie","kernel"],
+    ["office","usb"], ["usb","kernel"],
+  ],
+};
 
 const ATTACKS = {
-  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:20,
+  exploit: { code:"EX", name:"Эксплойт веб-приложения", hp:2, prop:"c", dmg:20, layer:"net",
     lesson:"Эксплойт идёт по сети и упирается в периметр. Веб-приложение — входная точка, встречать атаку лучше раньше.",
     short:"эксплойт", vector:"Внешняя сеть", cls:"Внедрение кода",
     path:["inet","perim","web"],
     desc:"Поиск уязвимости и выполнение кода на веб-сервере." },
 
-  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:20,
+  phishing: { code:"PH", name:"Фишинг", hp:3, prop:"c", dmg:20, layer:"net",
     lesson:"Фишинг приходит в почту, а не через межсетевой экран. Его ловят на рабочем месте: EDR и обучение.",
     short:"фишинг", vector:"Внешняя сеть", cls:"Кража доступа",
     path:["inet","perim","core","arm"],
     desc:"Письмо с вредоносной ссылкой. Кража учётных данных сотрудника." },
 
-  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:26,
+  brute: { code:"BR", name:"Подбор паролей", hp:4, prop:"c", dmg:26, layer:"net",
     lesson:"Подбор паролей останавливает MFA: пароль может утечь, второй фактор — нет.",
     short:"подбор", vector:"Внешняя сеть", cls:"Кража доступа",
     path:["inet","perim","core","db"],
     desc:"Перебор паролей к VPN и внутренним сервисам." },
 
-  usb: { code:"USB", name:"USB-закладка", hp:3, prop:"i", dmg:24,
-    lesson:"Флешка, оставленная в офисе, — не сувенир. Контроль носителей и обучение закрывают этот вектор.",
-    short:"USB", vector:"Физический доступ", cls:"Съёмный носитель",
+  usb: { code:"USB", name:"Флешка с вирусом", hp:3, prop:"i", dmg:24, layer:"net",
+    lesson:"Флешка с файлом-ловушкой проходит через сотрудника. Контроль носителей и обучение закрывают вектор.",
+    short:"флешка", vector:"Физический доступ", cls:"Съёмный носитель",
     path:["street","office","arm"],
-    desc:"Флешка, оставленная в офисе или принесённая «по работе»." },
+    desc:"Вредоносный файл на носителе, который подключают к рабочему месту." },
 
-  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:45,
+  ransom: { code:"RW", name:"Шифровальщик", hp:6, prop:"i", dmg:45, layer:"net",
     lesson:"Шифровальщик идёт цепочкой. Сегментация и EDR тормозят, резервные копии снижают ущерб.",
     short:"шифровальщик", vector:"Внешняя сеть", cls:"Вредоносная программа",
     path:["inet","perim","core","arm","db","backup"],
     desc:"Заражение, боковое перемещение, шифрование данных и копий." },
 
-  breakin: { code:"BRK", name:"Проникновение в серверную", hp:5, prop:"i", dmg:40,
+  breakin: { code:"BRK", name:"Проникновение в серверную", hp:5, prop:"i", dmg:40, layer:"net",
     lesson:"Проникновение в серверную обходит сеть целиком. СКУД, охрана и сейф — тоже периметр.",
     short:"проникновение", vector:"Физический доступ", cls:"Проникновение",
     path:["street","office","server","db"],
     desc:"Посторонний проходит в серверную и получает доступ к оборудованию." },
 
-  theft: { code:"TH", name:"Кража ноутбука", hp:3, prop:"c", dmg:30,
+  theft: { code:"TH", name:"Кража ноутбука", hp:3, prop:"c", dmg:30, layer:"net",
     lesson:"Ноутбук без шифрования диска — это вынесенная база данных. Шифрование и сейф снижают ущерб.",
     short:"кража", vector:"Физический доступ", cls:"Кража носителя",
     path:["street","office","arm"],
     desc:"Ноутбук или диск с данными уносят из офиса." },
 
-  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:34,
+  mitm: { code:"MI", name:"Перехват канала", hp:3, prop:"c", dmg:34, layer:"net",
     lesson:"Канал филиала без шифрования читается. Криптошлюз закрывает перехват.",
     short:"перехват", vector:"Канал связи", cls:"Перехват",
     path:["branch","core","db"],
     desc:"MitM на незащищённом канале филиала." },
 
-  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:38,
+  ddos: { code:"DD", name:"DDoS", hp:4, prop:"a", dmg:38, layer:"net",
     lesson:"DDoS бьёт по доступности. Его сдерживают на периметре, до сервера.",
     short:"DDoS", vector:"Внешняя сеть", cls:"Отказ в обслуживании",
     path:["inet","perim","web"],
     desc:"Перегрузка веб-сервера запросами. Отказ в обслуживании." },
 
-  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:38,
+  leak: { code:"LK", name:"Утечка данных", hp:4, prop:"c", dmg:38, layer:"net",
     lesson:"Утечка идёт изнутри. DLP и ограничение привилегий работают на данных, а не на границе.",
     short:"утечка", vector:"Внутренняя сеть", cls:"Утечка данных",
     path:["arm","db"],
     desc:"Выгрузка данных изнутри периметра." },
+
+  /* ---------- аппаратный уровень ---------- */
+  evilmaid: { code:"EM", name:"Подмена прошивки", hp:5, prop:"i", dmg:34, layer:"hw",
+    lesson:"Подмена прошивки не видна операционной системе. Пломбы, камеры и контроль прошивок — единственная защита.",
+    short:"прошивка", vector:"Физический доступ", cls:"Подмена прошивки",
+    path:["street","office","server","bios"],
+    desc:"Злоумышленник получает физический доступ и перепрошивает BIOS/UEFI." },
+
+  bootkit: { code:"BK", name:"Заражение загрузчика", hp:6, prop:"i", dmg:40, layer:"hw",
+    lesson:"Антивирус не проверяет загрузчик. Secure Boot и измеренная загрузка проверяют цепочку до ядра.",
+    short:"bootkit", vector:"Аппаратный уровень", cls:"Заражение загрузчика",
+    path:["server","bios","boot","kernel"],
+    desc:"Bootkit прописывается в загрузчик и запускается раньше операционной системы." },
+
+  badusb: { code:"BU", name:"BadUSB", hp:4, prop:"i", dmg:30, layer:"hw",
+    lesson:"Флешка может представиться клавиатурой. Белый список устройств и физические блокираторы закрывают порт.",
+    short:"BadUSB", vector:"Физический доступ", cls:"HID-эмуляция",
+    path:["street","office","usb","kernel"],
+    desc:"Устройство представляется клавиатурой и само вводит команды." },
+
+  dma: { code:"DM", name:"DMA через Thunderbolt", hp:4, prop:"c", dmg:34, layer:"hw",
+    lesson:"Thunderbolt даёт прямое чтение памяти в обход ОС. IOMMU/VT-d изолирует устройство от чужих адресов.",
+    short:"DMA", vector:"Аппаратный уровень", cls:"Прямой доступ к памяти",
+    path:["server","pcie","kernel"],
+    desc:"Внешнее устройство читает память напрямую, минуя операционную систему." },
+
+  driver: { code:"DR", name:"Подписанный драйвер", hp:5, prop:"i", dmg:36, layer:"hw",
+    lesson:"Кража ключа подписи делает вредоносный драйвер доверенным. Помогают отзыв сертификатов и контроль целостности ядра.",
+    short:"драйвер", vector:"Сеть", cls:"Подписанный вредоносный код",
+    path:["inet","updates","kernel"],
+    desc:"Вредоносный драйвер подписан украденным ключом и выглядит доверенным." },
+
+  supply: { code:"SU", name:"Закладка в оборудовании", hp:4, prop:"c", dmg:34, layer:"hw",
+    lesson:"Закладку можно встроить в кабель или периферию. Проверка поставщика и осмотр партии — часть периметра.",
+    short:"закладка", vector:"Поставка", cls:"Закладка в оборудовании",
+    path:["street","office","usb"],
+    desc:"Имплант в кабеле или периферии, установленный до поставки." },
+
+  aibackdoor: { code:"AI", name:"Закладка в модели", hp:4, prop:"c", dmg:34, layer:"net",
+    lesson:"В модель можно встроить триггер. Контроль данных и изоляция сервиса ограничивают ущерб.",
+    short:"ИИ-закладка", vector:"Сеть", cls:"Закладка в модели",
+    path:["inet","perim","core","ai"],
+    desc:"Триггер в обученной модели, который срабатывает по ключевой фразе." },
 };
 
 const CATS = {
@@ -434,7 +519,9 @@ const CATS = {
   auth: { name:"Доступ",          color:"#a48cff" },
   data: { name:"Данные",          color:"#f2b544" },
   phys: { name:"Физические",      color:"#ff9f5a" },
+  hw:   { name:"Аппаратные",      color:"#5fd0c0" },
   org:  { name:"Организационные", color:"#7dd3c0" },
+  ai:   { name:"ИИ",              color:"#c084fc" },
 };
 
 const TOOLS = {
@@ -498,9 +585,57 @@ const TOOLS = {
     dmg:{ theft:3 },
     about:"Запираемый сейф для носителей, документов и ключей. Защищает от быстрой кражи." },
 
+  camera: { code:"КАМ", name:"Видеонаблюдение", cost:25, cat:"phys", allow:["street","office","server"],
+    dmg:{ theft:2, breakin:1, evilmaid:1 },
+    about:"Камеры фиксируют проходы и действия в помещениях. Запись помогает расследовать кражу или подмену оборудования." },
+
+  seals: { code:"ПЛМ", name:"Пломбы и замки корпуса", cost:25, cat:"phys", allow:["office","server"],
+    dmg:{ evilmaid:4, supply:2 },
+    about:"Пломбы на корпусах и замки на стойках. Показывают, что оборудование вскрывали." },
+
+  usbblock: { code:"USB-Б", name:"Блокиратор USB", cost:20, cat:"phys", allow:["office","usb"],
+    dmg:{ badusb:3, theft:1 },
+    about:"Физическая заглушка в порт. Через неё нельзя подключить ни флешку, ни эмулятор клавиатуры." },
+
+  secureboot: { code:"SB", name:"Secure Boot", cost:35, cat:"hw", allow:["boot"],
+    dmg:{ bootkit:4, driver:1 },
+    about:"Проверяет подпись загрузчика до запуска ядра. Неподписанный загрузчик не получит управление." },
+
+  tpm: { code:"TPM", name:"TPM / измеренная загрузка", cost:30, cat:"hw", allow:["bios","boot"],
+    dmg:{ bootkit:3, evilmaid:3 },
+    about:"Хранит ключи и контрольные суммы компонентов загрузки. Изменение прошивки или загрузчика становится заметным." },
+
+  iommu: { code:"IOMMU", name:"IOMMU / VT-d", cost:30, cat:"hw", allow:["pcie"],
+    dmg:{ dma:5 },
+    about:"Изолирует устройства PCIe от памяти. Устройство не может читать чужие адреса напрямую." },
+
+  devlist: { code:"WL", name:"Белый список устройств", cost:25, cat:"hw", allow:["usb","office"],
+    dmg:{ badusb:4, supply:2 },
+    about:"Разрешает только известные клавиатуры, мыши и токены. Незнакомое HID-устройство не подключится." },
+
+  fwctl: { code:"FWCTL", name:"Контроль прошивок", cost:30, cat:"hw", allow:["bios"],
+    dmg:{ evilmaid:3, driver:2 },
+    about:"Сверяет версию и подпись прошивки с эталоном. Перепрошивка вне регламента обнаруживается." },
+
+  kernelctl: { code:"KCTL", name:"Целостность ядра", cost:30, cat:"hw", allow:["kernel"],
+    dmg:{ driver:5, bootkit:2 },
+    about:"Следит за модулями ядра и подписями драйверов. Подменённый драйвер не загрузится." },
+
+  updctl: { code:"UPD", name:"Контроль обновлений", cost:25, cat:"hw", allow:["updates"],
+    dmg:{ driver:4 },
+    about:"Проверяет подпись и источник обновлений. Подменённый пакет не установится." },
+
+  vendor: { code:"ПОСТ", name:"Проверка поставок", cost:30, cat:"org", allow:["office"],
+    dmg:{ supply:4 },
+    about:"Закупка у проверенных поставщиков, осмотр партий, проверка серийных номеров и упаковки." },
+
   train: { code:"ОБУЧ", name:"Обучение сотрудников", cost:30, cat:"org", allow:["office","arm"],
     dmg:{ phishing:2, usb:2 },
     about:"Регулярное обучение: как распознать фишинг, что делать с найденной флешкой, кому сообщать об инциденте." },
+
+  aictl: { code:"AI", name:"Контроль моделей и данных", cost:30, cat:"ai", allow:["ai"],
+    dmg:{ aibackdoor:5 },
+    about:"Проверяет обучающие данные и артефакты модели, ограничивает внешние триггеры и доступ к весам." },
 };
 
 const WAVES = [
@@ -522,18 +657,18 @@ const WAVES = [
   { atk:["mitm","leak"], hp:1.15, dmg:1.15 },
   { atk:["phishing","brute"], hp:1.15, dmg:1.15 },
   { atk:["usb","exploit"], hp:1.2, dmg:1.2 },
-  { atk:["ransom","ddos"], hp:1.2, dmg:1.25 },
-  { atk:["breakin","leak"], hp:1.25, dmg:1.25 },
-  { atk:["mitm","phishing"], hp:1.25, dmg:1.3 },
-  { atk:["theft","brute"], hp:1.3, dmg:1.3 },
-  { atk:["ransom","usb"], hp:1.3, dmg:1.35 },
-  { atk:["ddos","breakin"], hp:1.35, dmg:1.4 },
-  { atk:["leak","mitm"], hp:1.35, dmg:1.45 },
-  { atk:["phishing","ransom"], hp:1.4, dmg:1.5 },
-  { atk:["breakin","theft","usb"], hp:1.45, dmg:1.55 },
-  { atk:["ddos","leak","brute"], hp:1.5, dmg:1.6 },
-  { atk:["ransom","mitm","exploit"], hp:1.55, dmg:1.7 },
-  { atk:["ransom","breakin","ddos","leak","phishing"], hp:1.6, dmg:1.8 },
+  { atk:["evilmaid"], hp:1.0, dmg:1.0 },
+  { atk:["bootkit"], hp:1.0, dmg:1.0 },
+  { atk:["badusb"], hp:1.0, dmg:1.0 },
+  { atk:["dma"], hp:1.0, dmg:1.0 },
+  { atk:["driver"], hp:1.0, dmg:1.0 },
+  { atk:["supply"], hp:1.0, dmg:1.0 },
+  { atk:["aibackdoor"], hp:1.0, dmg:1.0 },
+  { atk:["phishing","evilmaid"], hp:1.1, dmg:1.1 },
+  { atk:["badusb","ransom"], hp:1.15, dmg:1.2 },
+  { atk:["bootkit","ddos"], hp:1.2, dmg:1.25 },
+  { atk:["dma","leak","driver"], hp:1.25, dmg:1.35 },
+  { atk:["bootkit","dma","badusb","driver","aibackdoor","ddos"], hp:1.35, dmg:1.5 },
 ];
 
 const PROP = { c:"К", i:"Ц", a:"Д" };
@@ -541,7 +676,7 @@ const PROP_FULL = { c:"конфиденциальность", i:"целостн�
 
 const CAT_ORDER = [
   ["all","Все"], ["net","Сетевые"], ["host","Хосты"], ["auth","Доступ"],
-  ["data","Данные"], ["phys","Физические"], ["org","Орг"],
+  ["data","Данные"], ["phys","Физические"], ["hw","Аппаратные"], ["org","Орг"], ["ai","ИИ"],
 ];
 
 /* ============================ СОСТОЯНИЕ ============================ */
@@ -553,6 +688,7 @@ const state = {
   placed: {},
   node: null,
   cat: "all",
+  view: "net",
   phase: "build",
   defeated: false,
   won: false,
@@ -581,6 +717,7 @@ function log(kind, text){
 function renderAll(){
   renderHud();
   renderIntel();
+  renderViewToggle();
   renderMap();
   renderInspector();
   renderCats();
@@ -623,34 +760,50 @@ function renderIntel(){
     return;
   }
   const wave = WAVES[state.wave];
+  const hasHw = wave.atk.some(t => ATTACKS[t].layer === "hw");
   box.innerHTML = wave.atk.map(type => {
     const a = ATTACKS[type];
     const hp = Math.max(1, Math.round(a.hp * wave.hp));
     const dmg = Math.max(1, Math.round(a.dmg * wave.dmg));
     const path = a.path.map(id => NODES[id].name).join(" → ");
-    const phys = a.vector === "Физический доступ";
+    const hw = a.layer === "hw";
     return '<div class="threat">' +
       '<div class="th-top"><span class="code">' + a.code + '</span>' +
       '<span class="hp">прочность ' + hp + '</span></div>' +
       '<div class="th-name">' + esc(a.name) + '</div>' +
-      '<div class="tchips"><span class="tchip' + (phys ? " phys" : "") + '">' + esc(a.vector) + '</span>' +
-      '<span class="tchip">' + esc(a.cls) + '</span></div>' +
+      '<div class="tchips">' +
+        '<span class="tchip' + (hw ? " hw" : "") + '">' + esc(a.vector) + '</span>' +
+        '<span class="tchip">' + esc(a.cls) + '</span>' +
+      '</div>' +
       '<div class="th-path">' + esc(path) + '</div>' +
       '<div class="th-desc">' + esc(a.desc) + '</div>' +
       '<div class="th-meta"><span>бьёт по: ' + PROP[a.prop] + '</span>' +
       '<span>урон: ' + dmg + '</span></div>' +
       '</div>';
-  }).join("");
+  }).join("") +
+  (hasHw && state.view !== "hw"
+    ? '<div class="none">Часть атак — на аппаратном уровне. Переключите схему сверху.</div>'
+    : "");
+}
+
+function renderViewToggle(){
+  document.getElementById("viewToggle").innerHTML =
+    '<button class="vt ' + (state.view === "net" ? "on" : "") + '" data-view="net">Сеть и объект</button>' +
+    '<button class="vt ' + (state.view === "hw" ? "on" : "") + '" data-view="hw">Аппаратный уровень</button>';
 }
 
 function renderMap(){
   const svg = document.getElementById("map");
+  const view = state.view;
+  const pos = POS[view];
   const firstHints = state.wave === 0 && !Object.keys(state.placed).length;
 
   const hot = new Set();
   if(state.wave < WAVES.length){
     WAVES[state.wave].atk.forEach(t => {
-      const p = ATTACKS[t].path;
+      const a = ATTACKS[t];
+      if(a.layer !== view) return;
+      const p = a.path;
       for(let i = 0; i < p.length - 1; i++){
         hot.add(p[i] + "-" + p[i + 1]);
         hot.add(p[i + 1] + "-" + p[i]);
@@ -658,14 +811,18 @@ function renderMap(){
     });
   }
 
-  const edges = EDGES.map(([a, b]) => {
-    const A = NODES[a], B = NODES[b];
+  const edges = EDGES[view].map(([a, b]) => {
+    const A = pos[a], B = pos[b];
+    if(!A || !B) return "";
     const h = hot.has(a + "-" + b) ? " hot" : "";
-    return '<line class="edge' + h + '" x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '"/>' +
-      '<line class="edge-flow' + h + '" x1="' + A.x + '" y1="' + A.y + '" x2="' + B.x + '" y2="' + B.y + '"/>';
+    return '<line class="edge' + h + '" x1="' + A[0] + '" y1="' + A[1] + '" x2="' + B[0] + '" y2="' + B[1] + '"/>' +
+      '<line class="edge-flow' + h + '" x1="' + A[0] + '" y1="' + A[1] + '" x2="' + B[0] + '" y2="' + B[1] + '"/>';
   }).join("");
 
-  const nodes = Object.entries(NODES).map(([id, n]) => {
+  const nodes = Object.keys(NODES).filter(id => NODES[id].views.includes(view)).map(id => {
+    const n = NODES[id];
+    const p = pos[id];
+    if(!p) return "";
     const inst = state.placed[id] || [];
     const sel = state.node === id ? " sel" : "";
     const hint = firstHints && id === "perim" ? " hint" : "";
@@ -677,19 +834,23 @@ function renderMap(){
         '<text y="3">' + esc(TOOLS[t].code) + '</text></g>';
     }).join("");
 
-    return '<g class="node t-' + n.type + sel + hint + '" data-node="' + id + '" transform="translate(' + n.x + ',' + n.y + ')">' +
+    return '<g class="node t-' + n.type + sel + hint + '" data-node="' + id + '" transform="translate(' + p[0] + ',' + p[1] + ')">' +
       '<rect class="nbox" x="-62" y="-30" width="124" height="60" rx="10"/>' +
       '<text class="n-name" y="-3">' + esc(n.name) + '</text>' +
       '<text class="n-sub" y="15">' + esc(n.sub) + '</text>' +
       badges + '</g>';
   }).join("");
 
-  svg.innerHTML = edges + nodes +
-    '<text class="lane-label" x="905" y="30">ФИЗИЧЕСКИЙ ПЕРИМЕТР</text>' +
-    '<g id="tokens"></g>';
+  const lane = view === "net"
+    ? '<text class="lane-label" x="905" y="30">ФИЗИЧЕСКИЙ ПЕРИМЕТР</text>'
+    : '<text class="lane-label hw" x="720" y="30">АППАРАТНЫЙ УРОВЕНЬ</text>';
+
+  svg.innerHTML = edges + nodes + lane + '<g id="tokens"></g>';
 }
 
 function nodeKind(n){
+  if(n.type === "hw") return "аппаратный узел";
+  if(n.type === "ai") return "сервис";
   if(n.type === "phys") return "физический объект";
   if(n.type === "street") return "физическая точка входа";
   if(n.type === "ext") return "внешняя точка";
@@ -872,12 +1033,12 @@ function openTool(id){
 
 /* ============================ АНИМАЦИЯ ============================ */
 
-function floatText(node, text, kind){
+function floatText(nodePos, text, kind){
   const layer = document.getElementById("tokens");
   if(!layer) return;
   const el = document.createElementNS(NS, "text");
-  el.setAttribute("x", node.x);
-  el.setAttribute("y", node.y - 36);
+  el.setAttribute("x", nodePos[0]);
+  el.setAttribute("y", nodePos[1] - 36);
   el.setAttribute("class", "float " + kind);
   el.textContent = text;
   layer.appendChild(el);
@@ -892,13 +1053,21 @@ function pulse(nodeId, kind){
 }
 
 async function runAttack(atk){
+  const need = atk.layer === "hw" ? "hw" : "net";
+  if(state.view !== need){
+    state.view = need;
+    renderAll();
+    await sleep(280);
+  }
+
   const layer = document.getElementById("tokens");
   if(!layer) return { atk, leaked:false, dmgToCia:0, stoppedAt:null };
+  const pos = POS[state.view];
 
-  const start = NODES[atk.path[0]];
+  const start = pos[atk.path[0]];
   const g = document.createElementNS(NS, "g");
   g.setAttribute("class", "token");
-  g.style.transform = "translate(" + start.x + "px," + start.y + "px)";
+  g.style.transform = "translate(" + start[0] + "px," + start[1] + "px)";
   g.innerHTML = '<circle r="15"></circle><text y="4">' + atk.code + '</text>';
   layer.appendChild(g);
   await sleep(180);
@@ -908,19 +1077,19 @@ async function runAttack(atk){
 
   for(let i = 0; i < atk.path.length; i++){
     const id = atk.path[i];
-    const n = NODES[id];
+    const p = pos[id];
 
     if(i > 0){
-      g.style.transform = "translate(" + n.x + "px," + n.y + "px)";
+      g.style.transform = "translate(" + p[0] + "px," + p[1] + "px)";
       await sleep(450);
     }
 
     const dmg = nodeDamage(id, atk.type);
     if(dmg > 0){
       hp -= dmg;
-      floatText(n, "−" + dmg, "def");
+      floatText(p, "−" + dmg, "def");
       pulse(id, "hit");
-      log("ok", "СЗИ на «" + n.name + "»: −" + dmg + " к прочности атаки");
+      log("ok", "СЗИ на «" + NODES[id].name + "»: −" + dmg + " к прочности атаки");
       await sleep(280);
       if(hp <= 0){ stoppedAt = id; break; }
     }
@@ -936,8 +1105,7 @@ async function runAttack(atk){
       log("warn", "Бэкап снизил ущерб от шифровальщика вдвое");
     }
     applyDamage(atk.prop, dmgToCia);
-    const target = NODES[atk.path[atk.path.length - 1]];
-    floatText(target, "−" + dmgToCia + " " + PROP[atk.prop], atk.prop);
+    floatText(pos[atk.path[atk.path.length - 1]], "−" + dmgToCia + " " + PROP[atk.prop], atk.prop);
     pulse(atk.path[atk.path.length - 1], "breach");
     log("bad", atk.name + ": прорыв, −" + dmgToCia + " " + PROP_FULL[atk.prop]);
     renderHud();
@@ -991,7 +1159,7 @@ async function startWave(){
   if(state.wave >= WAVES.length){
     state.won = true;
     renderAll();
-    showVictory(results);
+    showVictory();
     return;
   }
 
@@ -1067,8 +1235,8 @@ function showVictory(){
     '<div class="res-row"><span>Целостность</span><span>' + state.cia.i + ' / 100</span></div>' +
     '<div class="res-row"><span>Доступность</span><span>' + state.cia.a + ' / 100</span></div>' +
     '<div class="res-row"><span>Остаток бюджета</span><span>' + state.budget + ' ₽</span></div>' +
-    '<div class="lesson"><b>ГЛАВНОЕ</b>Не бывает одного средства от всего. Защита — это набор контролей, ' +
-      'расставленных по маршруту атаки. И не только в сети: дверь серверной — тоже периметр.</div>' +
+    '<div class="lesson"><b>ГЛАВНОЕ</b>Не бывает одного средства от всего. Защита — это набор контролей по маршруту атаки. ' +
+      'И не только в сети: прошивка, загрузчик и дверь серверной — тоже периметр.</div>' +
     '<div class="modal-actions"><button class="btn primary" data-act="restart">Сыграть заново</button></div>',
     true
   );
@@ -1078,11 +1246,11 @@ function helpModal(first){
   openModal(
     '<div class="kicker">ПЕРИМЕТР · СМЕНА 1</div>' +
     '<h2>' + (first ? "Держите периметр" : "Правила") + '</h2>' +
-    '<p>Компания «Стабильность-С», 45 человек. Атаки идут волнами — по сети и через физический доступ. ' +
+    '<p>Компания «Стабильность-С», 45 человек. Атаки идут волнами по трём контурам: сеть, физический доступ и аппаратный уровень. ' +
       'Перед каждой волной вы видите разведку и расставляете защиту.</p>' +
     '<div class="steps">' +
-      '<div class="step"><div class="step-n">1</div><div class="step-t"><b>Выберите узел</b> на схеме: сеть или физический периметр. У каждого узла есть слоты.</div></div>' +
-      '<div class="step"><div class="step-n">2</div><div class="step-t"><b>Откройте средство защиты.</b> Нажмите на карточку — увидите, что это и против чего работает. Устанавливать не обязательно.</div></div>' +
+      '<div class="step"><div class="step-n">1</div><div class="step-t"><b>Выберите контур.</b> Кнопки над схемой переключают «Сеть и объект» и «Аппаратный уровень»: прошивка, загрузчик, ядро, PCIe, USB.</div></div>' +
+      '<div class="step"><div class="step-n">2</div><div class="step-t"><b>Выберите узел и откройте средство защиты.</b> Нажмите на карточку — увидите, что это и против чего работает. Устанавливать не обязательно.</div></div>' +
       '<div class="step"><div class="step-n">3</div><div class="step-t"><b>Начните волну.</b> Атака идёт по цепочке узлов; на каждом узле защита снимает прочность. Если прочность кончилась — атака остановлена.</div></div>' +
       '<div class="step"><div class="step-n">4</div><div class="step-t"><b>Прорыв бьёт по К/Ц/Д.</b> Довели любую шкалу до нуля — смена провалена. Переживите ' + WAVES.length + ' волн.</div></div>' +
     '</div>' +
@@ -1105,6 +1273,14 @@ document.addEventListener("click", (e) => {
   if(rm){
     const parts = rm.dataset.remove.split(":");
     removeTool(parts[0], parts[1]);
+    return;
+  }
+
+  const viewEl = e.target.closest("[data-view]");
+  if(viewEl){
+    state.view = viewEl.dataset.view;
+    if(state.node && !NODES[state.node].views.includes(state.view)) state.node = null;
+    renderAll();
     return;
   }
 
